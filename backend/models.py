@@ -109,6 +109,7 @@ class AspectInfo:
     aspect: Aspect
     orb: float
     applying: bool
+    perfection_within_sign: bool = True
     exact_time: Optional[datetime.datetime] = None
     degrees_to_exact: float = 0.0
 
