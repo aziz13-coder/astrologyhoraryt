@@ -189,6 +189,43 @@ def days_to_sign_exit(longitude: float, speed: float) -> Optional[float]:
     return degrees_to_boundary / abs(speed)
 
 
+def is_within_sign_change(
+    longitude: float, speed: float, threshold: float = 1.0
+) -> bool:
+    """Return True if a planet is close to a sign boundary and moving toward it.
+
+    Parameters
+    ----------
+    longitude:
+        Current ecliptic longitude of the planet in degrees.
+    speed:
+        Speed in degrees per day (negative for retrograde). A value near zero
+        is treated as stationary and will always return ``False``.
+    threshold:
+        Number of degrees from the next sign boundary at which the planet
+        should be flagged.
+
+    Returns
+    -------
+    bool
+        ``True`` if the planet is within ``threshold`` degrees of the next
+        sign boundary *and* its motion carries it toward that boundary.
+    """
+
+    if abs(speed) < 0.001:
+        return False
+
+    direction = 1 if speed > 0 else -1
+    boundary_longitude = calculate_sign_boundary_longitude(longitude, direction)
+
+    if direction > 0:
+        distance = (boundary_longitude - longitude) % 360
+    else:
+        distance = (longitude - boundary_longitude) % 360
+
+    return distance <= threshold
+
+
 def calculate_elongation(planet_longitude: float, sun_longitude: float) -> float:
     """
     Calculate elongation (angular distance) between planet and Sun.
@@ -361,5 +398,5 @@ def degrees_to_dms(degrees: float) -> Tuple[int, int, float]:
     
     if degrees < 0:
         deg = -deg
-    
+
     return (deg, min_int, sec)

@@ -10,6 +10,7 @@ from .dsl import (
     Collection,
     Reception,
     EssentialDignity,
+    AccidentalDignity,
     Role,
     Moon,
     L10,
@@ -173,6 +174,31 @@ def dispatch(obj: Any, contract: Optional[Dict[str, Planet]] = None) -> List[Dis
                     "planets": list(role_map.values()),
                 }
             ]
+    if isinstance(obj, AccidentalDignity):
+        if isinstance(obj.score, str):
+            score = obj.score.lower()
+            token = None
+            if score == "retro":
+                token = TestimonyKey.ACCIDENTAL_RETROGRADE
+            elif score == "sign_change":
+                actor = _resolve_role(obj.actor, contract) if isinstance(obj.actor, Role) else obj.actor
+                if actor is not None:
+                    token_name = f"SIGN_CHANGE_{actor.name}"
+                    token = getattr(TestimonyKey, token_name, None)
+            if token is not None:
+                role_map = _collect_roles(obj, contract)
+                planets = list(role_map.values()) or [
+                    _resolve_role(obj.actor, contract) if isinstance(obj.actor, Role) else obj.actor
+                ]
+                return [
+                    {
+                        "key": token,
+                        "house": None,
+                        "factor": 1.0,
+                        "roles": list(role_map.keys()),
+                        "planets": planets,
+                    }
+                ]
     return []
 
 

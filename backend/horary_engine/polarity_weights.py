@@ -56,6 +56,13 @@ class TestimonyKey(Enum):
     COLLECTION_OPPOSITION_WITHOUT_RECEPTION = "collection_opposition_without_reception"
     ESSENTIAL_DETRIMENT = "essential_detriment"
     ACCIDENTAL_RETROGRADE = "accidental_retrograde"
+    SIGN_CHANGE_SUN = "sign_change_sun"
+    SIGN_CHANGE_MOON = "sign_change_moon"
+    SIGN_CHANGE_MERCURY = "sign_change_mercury"
+    SIGN_CHANGE_VENUS = "sign_change_venus"
+    SIGN_CHANGE_MARS = "sign_change_mars"
+    SIGN_CHANGE_JUPITER = "sign_change_jupiter"
+    SIGN_CHANGE_SATURN = "sign_change_saturn"
 
 
 # Prevent pytest from collecting the enum as a test class
@@ -92,6 +99,13 @@ POLARITY_TABLE: dict[TestimonyKey, Polarity] = {
     # Debility indicators
     TestimonyKey.ESSENTIAL_DETRIMENT: Polarity.NEGATIVE,
     TestimonyKey.ACCIDENTAL_RETROGRADE: Polarity.NEGATIVE,
+    TestimonyKey.SIGN_CHANGE_SUN: Polarity.NEGATIVE,
+    TestimonyKey.SIGN_CHANGE_MOON: Polarity.NEGATIVE,
+    TestimonyKey.SIGN_CHANGE_MERCURY: Polarity.NEGATIVE,
+    TestimonyKey.SIGN_CHANGE_VENUS: Polarity.NEGATIVE,
+    TestimonyKey.SIGN_CHANGE_MARS: Polarity.NEGATIVE,
+    TestimonyKey.SIGN_CHANGE_JUPITER: Polarity.NEGATIVE,
+    TestimonyKey.SIGN_CHANGE_SATURN: Polarity.NEGATIVE,
 }
 
 # Mapping of tokens to rule identifiers for dynamic weight resolution
@@ -118,6 +132,13 @@ TOKEN_RULE_MAP: dict[TestimonyKey, str] = {
     TestimonyKey.PERFECTION_COLLECTION_OF_LIGHT: "P3",
     TestimonyKey.ESSENTIAL_DETRIMENT: "MOD2",
     TestimonyKey.ACCIDENTAL_RETROGRADE: "MOD3",
+    TestimonyKey.SIGN_CHANGE_SUN: "MOD3",
+    TestimonyKey.SIGN_CHANGE_MOON: "MOD3",
+    TestimonyKey.SIGN_CHANGE_MERCURY: "MOD3",
+    TestimonyKey.SIGN_CHANGE_VENUS: "MOD3",
+    TestimonyKey.SIGN_CHANGE_MARS: "MOD3",
+    TestimonyKey.SIGN_CHANGE_JUPITER: "MOD3",
+    TestimonyKey.SIGN_CHANGE_SATURN: "MOD3",
 }
 
 
