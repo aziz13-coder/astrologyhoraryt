@@ -517,8 +517,10 @@ class EnhancedTraditionalAstrologicalCalculator:
             solar_analyses[planet_enum] = solar_analysis
             
             # Calculate comprehensive traditional dignity with all factors
-            planet_pos.dignity_score = self._calculate_comprehensive_traditional_dignity(
+            dignity_info = self._calculate_comprehensive_traditional_dignity(
                 planet_pos.planet, planet_pos, houses, planets[Planet.SUN], solar_analysis)
+            planet_pos.dignity_score = dignity_info["score"]
+            planet_pos.dignities = dignity_info["dignities"]
         
         # Calculate enhanced traditional aspects
         aspects = calculate_enhanced_aspects(planets, jd_ut)
@@ -753,28 +755,60 @@ class EnhancedTraditionalAstrologicalCalculator:
         
         return score
     
-    def _calculate_comprehensive_traditional_dignity(self, planet: Planet, planet_pos: PlanetPosition, 
+    def _calculate_comprehensive_traditional_dignity(self, planet: Planet, planet_pos: PlanetPosition,
                                                    houses: List[float], sun_pos: PlanetPosition,
-                                                   solar_analysis: Optional[SolarAnalysis] = None) -> int:
-        """Comprehensive traditional dignity scoring with all classical factors (ENHANCED)"""
+                                                   solar_analysis: Optional[SolarAnalysis] = None) -> Dict[str, Any]:
+        """Comprehensive traditional dignity scoring with all classical factors (ENHANCED)
+
+        Returns a dict with total score and a list of dignities present so messaging
+        and confidence adjustments can reference specific dignities like triplicity,
+        term and face.
+        """
         score = 0
+        dignities: List[str] = []
         config = cfg()
         sign = self._get_sign(planet_pos.longitude)
         house = planet_pos.house
+        sign_degree = (planet_pos.longitude - sign.start_degree) % 30
         
         # === ESSENTIAL DIGNITIES ===
         
         # Rulership (+5)
         if sign.ruler == planet:
             score += config.dignity.rulership
+            dignities.append("rulership")
         
         # Exaltation (+4)
         if planet in self.exaltations and self.exaltations[planet] == sign:
             score += config.dignity.exaltation
+            dignities.append("exaltation")
         
         # Triplicity (+3) - traditional day/night rulers
         triplicity_score = self._calculate_triplicity_dignity(planet, sign, sun_pos)
-        score += triplicity_score
+        if triplicity_score:
+            score += triplicity_score
+            dignities.append("triplicity")
+
+        # Terms (+2) and Faces (+1)
+        try:
+            terms_table = getattr(cfg().reception.terms, sign.sign_name)
+            for term in terms_table:
+                if term.start <= sign_degree < term.end and Planet[term.ruler.upper()] == planet:
+                    score += 2
+                    dignities.append("term")
+                    break
+        except AttributeError:
+            pass
+
+        try:
+            faces_table = getattr(cfg().reception.faces, sign.sign_name)
+            for face in faces_table:
+                if face.start <= sign_degree < face.end and Planet[face.ruler.upper()] == planet:
+                    score += 1
+                    dignities.append("face")
+                    break
+        except AttributeError:
+            pass
         
         # Detriment (-5)
         detriment_signs = {
@@ -845,7 +879,7 @@ class EnhancedTraditionalAstrologicalCalculator:
                 if not solar_analysis.traditional_exception:
                     score -= config.confidence.solar.under_beams_penalty
         
-        return score
+        return {"score": score, "dignities": dignities}
     
     def _calculate_triplicity_dignity(self, planet: Planet, sign: Sign, sun_pos: PlanetPosition) -> int:
         """Calculate traditional triplicity dignity (ENHANCED)"""
@@ -2246,6 +2280,11 @@ class EnhancedTraditionalHoraryJudgmentEngine:
         # Enhanced retrograde handling - configurable instead of automatic denial
         querent_pos = chart.planets[querent]
         quesited_pos = chart.planets[quesited]
+        reception_info = self.reception_calculator.calculate_comprehensive_reception(
+            chart, querent, quesited
+        )
+        mutual = reception_info.get("mutual", "none")
+        one_way = reception_info.get("one_way", [])
         
         if not config.retrograde.automatic_denial:
             # Retrograde is now just a penalty, not automatic denial
@@ -2357,8 +2396,10 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                                           querent: Planet, quesited: Planet, reasoning: List[str]) -> float:
         """CRITICAL FIX 2: Adjust confidence based on significator dignities"""
         
-        querent_dignity = chart.planets[querent].dignity_score
-        quesited_dignity = chart.planets[quesited].dignity_score
+        querent_pos = chart.planets[querent]
+        quesited_pos = chart.planets[quesited]
+        querent_dignity = querent_pos.dignity_score
+        quesited_dignity = quesited_pos.dignity_score
         
         # Quesited dignity is most critical for success
         if quesited_dignity <= -10:
@@ -2387,6 +2428,15 @@ class EnhancedTraditionalHoraryJudgmentEngine:
             confidence = min(confidence + bonus, 95)
             reasoning.append(f"Strong querent dignity ({querent_dignity}): +{bonus}%")
             
+        # Minor dignity bonuses for triplicity/term/face (both significators)
+        dignity_bonus_map = {"triplicity": 3, "term": 2, "face": 1}
+        for planet, pos in ((querent, querent_pos), (quesited, quesited_pos)):
+            for dignity in pos.dignities:
+                if dignity in dignity_bonus_map:
+                    bonus = dignity_bonus_map[dignity]
+                    confidence = min(confidence + bonus, 95)
+                    reasoning.append(f"{planet.value} has {dignity} dignity (+{bonus}%)")
+
         return confidence
     
     def _apply_retrograde_quesited_penalty(self, confidence: float, chart: HoraryChart,
@@ -3428,37 +3478,42 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                 }
 
             if perfects_in_sign and not is_combustion_conjunction:
-                reception = self._check_enhanced_mutual_reception(chart, querent, quesited)
-                
+                reception_info = self.reception_calculator.calculate_comprehensive_reception(
+                    chart, querent, quesited
+                )
+                reception = reception_info["type"]
+                mutual = reception_info.get("mutual", "none")
+                one_way = reception_info.get("one_way", [])
+
                 # Enhanced reception weighting with configuration
-                if reception == "mutual_rulership":
+                if mutual == "mutual_rulership":
                     return {
                         "perfects": True,
                         "type": "direct",
                         "favorable": True,
                         "confidence": config.confidence.perfection.direct_with_mutual_rulership,
-                        "reason": f"Direct perfection: {self._format_aspect_for_display(querent.value, direct_aspect['aspect'], quesited.value, True)} with {self._format_reception_for_display(reception, querent, quesited, chart)}",
+                        "reason": f"Direct perfection: {self._format_aspect_for_display(querent.value, direct_aspect['aspect'], quesited.value, True)} with {reception_info['display_text']}",
                         "reception": reception,
                         "aspect": direct_aspect,
                         "tags": [{"family": "perfection", "kind": "direct"}],
                     }
-                elif reception == "mutual_exaltation":
+                elif mutual == "mutual_exaltation":
                     base_confidence = config.confidence.perfection.direct_with_mutual_exaltation
                     boosted_confidence = min(100, base_confidence + exaltation_confidence_boost)
-                    
+
                     return {
                         "perfects": True,
                         "type": "direct",
                         "favorable": True,
                         "confidence": int(boosted_confidence),
-                        "reason": f"Direct perfection: {self._format_aspect_for_display(querent.value, direct_aspect['aspect'], quesited.value, True)} with {self._format_reception_for_display(reception, querent, quesited, chart)}",
+                        "reason": f"Direct perfection: {self._format_aspect_for_display(querent.value, direct_aspect['aspect'], quesited.value, True)} with {reception_info['display_text']}",
                         "reception": reception,
                         "aspect": direct_aspect,
                         "tags": [{"family": "perfection", "kind": "direct"}],
                     }
                 else:
-                    favorable, penalty_reasons = self._is_aspect_favorable_enhanced(
-                        direct_aspect["aspect"], reception, chart, querent, quesited
+                    favorable, penalty_reasons, one_way_flag = self._is_aspect_favorable_enhanced(
+                        direct_aspect["aspect"], reception_info, chart, querent, quesited
                     )
 
                     aspect_name = direct_aspect['aspect'].display_name
@@ -3467,10 +3522,24 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                     if favorable:
                         confidence_value = config.confidence.perfection.direct_basic
                         if penalty_reasons:
-                            confidence_value = max(confidence_value - 15, 0)
-                            base_reason = (
-                                f"{aspect_name} between significators but weakened: {', '.join(penalty_reasons)}"
+                            penalty = 15
+                            if one_way_flag:
+                                penalty = 5
+                                penalty_reasons.append("one-way reception softens difficulties")
+                            confidence_value = max(confidence_value - penalty, 0)
+                            base_reason = f"{aspect_name} between significators but weakened: {', '.join(penalty_reasons)}"
+                        if mutual != "none":
+                            reception_bonus = getattr(
+                                config.confidence.reception, f"{mutual}_bonus", 5
                             )
+                            confidence_value = min(confidence_value + reception_bonus, 100)
+                            base_reason = f"{base_reason} with {reception_info['display_text']}"
+                        elif one_way:
+                            reception_bonus = getattr(
+                                config.confidence.reception, "one_way_bonus", 3
+                            )
+                            confidence_value = min(confidence_value + reception_bonus, 100)
+                            base_reason = f"{base_reason} with {reception_info['display_text']}"
                         return {
                             "perfects": True,
                             "type": "direct",
@@ -3483,9 +3552,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                         }
                     else:
                         if penalty_reasons:
-                            base_reason = (
-                                f"{aspect_name} penalized: {'; '.join(penalty_reasons)}"
-                            )
+                            base_reason = f"{aspect_name} penalized: {'; '.join(penalty_reasons)}"
                         elif reception == "none":
                             base_reason = f"{aspect_name} lacks reception"
                         else:
@@ -3704,6 +3771,17 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                 elif days_to_perfection <= 30:
                     base_confidence += 2
 
+                if mutual != "none":
+                    reception_bonus = getattr(
+                        config.confidence.reception, f"{mutual}_bonus", 5
+                    )
+                    base_confidence = min(base_confidence + reception_bonus, 100)
+                elif one_way:
+                    reception_bonus = getattr(
+                        config.confidence.reception, "one_way_bonus", 3
+                    )
+                    base_confidence = min(base_confidence + reception_bonus, 100)
+
                 return {
                     "perfects": True,
                     "type": "direct_timed",
@@ -3712,6 +3790,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                     "reason": f"Future {aspect_type.display_name} between {querent.value} and {quesited.value} in {days_to_perfection:.1f} days",
                     "t_perfect_days": days_to_perfection,
                     "aspect": aspect_type,
+                    "reception": reception_info["type"],
                     "tags": [{"family": "perfection", "kind": "direct_timed"}],
                 }
 
@@ -4456,25 +4535,29 @@ class EnhancedTraditionalHoraryJudgmentEngine:
         
         return base_favorable
     
-    def _is_aspect_favorable_enhanced(self, aspect: Aspect, reception: str, chart: HoraryChart, querent: Planet, quesited: Planet) -> Tuple[bool, List[str]]:
+    def _is_aspect_favorable_enhanced(self, aspect: Aspect, reception_info: Dict[str, Any], chart: HoraryChart, querent: Planet, quesited: Planet) -> Tuple[bool, List[str], bool]:
         """Enhanced aspect favorability returning penalty reasons for weak/cadent conditions"""
-        
+
         favorable_aspects = [Aspect.CONJUNCTION, Aspect.SEXTILE, Aspect.TRINE]
         unfavorable_aspects = [Aspect.SQUARE, Aspect.OPPOSITION]
-        
+
         base_favorable = aspect in favorable_aspects
 
-        # Mutual reception can overcome bad aspects completely
-        if reception in ["mutual_rulership", "mutual_exaltation", "mixed_reception"]:
-            return True, []
+        reception_type = reception_info.get("type", "none")
+        mutual = reception_info.get("mutual", "none")
+        one_way = reception_info.get("one_way", [])
 
-        # Evaluate cadent/weak conditions for confidence penalties
+        # Mutual reception can overcome bad aspects completely
+        if mutual in ["mutual_rulership", "mutual_exaltation", "mixed_reception"]:
+            return True, [], bool(one_way)
+
+        # Evaluate cadent/weak conditions for confidence penalties when no mutual reception
         querent_pos = chart.planets[querent]
         quesited_pos = chart.planets[quesited]
 
         cadent_houses = [3, 6, 9, 12]
         penalty_reasons = []
-        if reception == "none":
+        if mutual == "none":
             if quesited_pos.house in cadent_houses:
                 penalty_reasons.append(f"{quesited.value} in cadent {quesited_pos.house}th house")
             if quesited_pos.dignity_score < -5:
@@ -4485,9 +4568,9 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                 penalty_reasons.append(f"{querent.value} severely weak (dignity {querent_pos.dignity_score})")
 
         if aspect in unfavorable_aspects:
-            return False, penalty_reasons
+            return False, penalty_reasons, bool(one_way)
 
-        return base_favorable, penalty_reasons
+        return base_favorable, penalty_reasons, bool(one_way)
     
     def _analyze_enhanced_solar_factors(self, chart: HoraryChart, querent: Planet, quesited: Planet, 
                                       ignore_combustion: bool = False) -> Dict:

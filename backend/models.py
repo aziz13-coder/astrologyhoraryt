@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Tuple, Optional
 import datetime
@@ -99,6 +99,7 @@ class PlanetPosition:
     dignity_score: int
     retrograde: bool = False
     speed: float = 0.0  # degrees per day
+    dignities: List[str] = field(default_factory=list)
 
 
 @dataclass
