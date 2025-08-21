@@ -16,6 +16,12 @@ class TestimonyKey(Enum):
 
     MOON_APPLYING_TRINE_EXAMINER_SUN = "moon_applying_trine_examiner_sun"
     MOON_APPLYING_SQUARE_EXAMINER_SUN = "moon_applying_square_examiner_sun"
+    MOON_APPLYING_SEXTILE_EXAMINER_SUN = "moon_applying_sextile_examiner_sun"
+    MOON_APPLYING_SEXTILE_L1 = "moon_applying_sextile_l1"
+    MOON_APPLYING_SEXTILE_L7 = "moon_applying_sextile_l7"
+    MOON_APPLYING_OPPOSITION_EXAMINER_SUN = "moon_applying_opposition_examiner_sun"
+    MOON_APPLYING_OPPOSITION_L1 = "moon_applying_opposition_l1"
+    MOON_APPLYING_OPPOSITION_L7 = "moon_applying_opposition_l7"
     L10_FORTUNATE = "l10_fortunate"
     PERFECTION_DIRECT = "perfection_direct"
     PERFECTION_TRANSLATION_OF_LIGHT = "perfection_translation_of_light"
@@ -33,6 +39,14 @@ POLARITY_TABLE: dict[TestimonyKey, Polarity] = {
     TestimonyKey.MOON_APPLYING_TRINE_EXAMINER_SUN: Polarity.POSITIVE,
     # Example negative testimony
     TestimonyKey.MOON_APPLYING_SQUARE_EXAMINER_SUN: Polarity.NEGATIVE,
+    # Moon applying sextile aspects (positive)
+    TestimonyKey.MOON_APPLYING_SEXTILE_EXAMINER_SUN: Polarity.POSITIVE,
+    TestimonyKey.MOON_APPLYING_SEXTILE_L1: Polarity.POSITIVE,
+    TestimonyKey.MOON_APPLYING_SEXTILE_L7: Polarity.POSITIVE,
+    # Moon applying opposition aspects (negative)
+    TestimonyKey.MOON_APPLYING_OPPOSITION_EXAMINER_SUN: Polarity.NEGATIVE,
+    TestimonyKey.MOON_APPLYING_OPPOSITION_L1: Polarity.NEGATIVE,
+    TestimonyKey.MOON_APPLYING_OPPOSITION_L7: Polarity.NEGATIVE,
     # Fortunate outcome promised by L10
     TestimonyKey.L10_FORTUNATE: Polarity.POSITIVE,
     # Perfection testimonies are positive by default
@@ -47,6 +61,12 @@ POLARITY_TABLE: dict[TestimonyKey, Polarity] = {
 WEIGHT_TABLE: dict[TestimonyKey, float] = {
     TestimonyKey.MOON_APPLYING_TRINE_EXAMINER_SUN: 1.0,
     TestimonyKey.MOON_APPLYING_SQUARE_EXAMINER_SUN: 1.0,
+    TestimonyKey.MOON_APPLYING_SEXTILE_EXAMINER_SUN: 1.0,
+    TestimonyKey.MOON_APPLYING_SEXTILE_L1: 1.0,
+    TestimonyKey.MOON_APPLYING_SEXTILE_L7: 1.0,
+    TestimonyKey.MOON_APPLYING_OPPOSITION_EXAMINER_SUN: 1.0,
+    TestimonyKey.MOON_APPLYING_OPPOSITION_L1: 1.0,
+    TestimonyKey.MOON_APPLYING_OPPOSITION_L7: 1.0,
     TestimonyKey.L10_FORTUNATE: 1.0,
     TestimonyKey.PERFECTION_DIRECT: 1.0,
     TestimonyKey.PERFECTION_TRANSLATION_OF_LIGHT: 1.0,
