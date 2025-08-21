@@ -59,6 +59,7 @@ from .dsl import (
     Moon as MoonRole,
     Role as DslRole,
 )
+from .polarity_weights import TestimonyKey
 
 # Setup module logger
 logger = logging.getLogger(__name__)
@@ -186,14 +187,35 @@ def extract_testimonies(chart: HoraryChart, contract: Dict[str, Planet]) -> List
     # Aspects
     # ------------------------------------------------------------------
     for asp in getattr(chart, "aspects", []):
+        actor1 = resolve_actor(asp.planet1)
+        actor2 = resolve_actor(asp.planet2)
         primitives.append(
             dsl_aspect(
-                resolve_actor(asp.planet1),
-                resolve_actor(asp.planet2),
+                actor1,
+                actor2,
                 asp.aspect,
                 applying=asp.applying,
             )
         )
+
+        if asp.applying and asp.aspect in (Aspect.SEXTILE, Aspect.OPPOSITION):
+            if asp.planet1 == Planet.MOON or asp.planet2 == Planet.MOON:
+                other = actor2 if asp.planet1 == Planet.MOON else actor1
+                role_name = other.name.lower() if isinstance(other, DslRole) else ""
+                if asp.aspect is Aspect.SEXTILE:
+                    if role_name == "examiner":
+                        primitives.append(TestimonyKey.MOON_APPLYING_SEXTILE_EXAMINER_SUN)
+                    elif role_name == "l1":
+                        primitives.append(TestimonyKey.MOON_APPLYING_SEXTILE_L1)
+                    elif role_name in ("l7", "lq"):
+                        primitives.append(TestimonyKey.MOON_APPLYING_SEXTILE_L7)
+                else:  # Aspect.OPPOSITION
+                    if role_name == "examiner":
+                        primitives.append(TestimonyKey.MOON_APPLYING_OPPOSITION_EXAMINER_SUN)
+                    elif role_name == "l1":
+                        primitives.append(TestimonyKey.MOON_APPLYING_OPPOSITION_L1)
+                    elif role_name in ("l7", "lq"):
+                        primitives.append(TestimonyKey.MOON_APPLYING_OPPOSITION_L7)
 
     # ------------------------------------------------------------------
     # Dignity states (essential)
