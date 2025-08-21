@@ -6,7 +6,8 @@ sys.path.append(str(ROOT))
 sys.path.append(str(ROOT / "backend"))
 
 from question_analyzer import TraditionalHoraryQuestionAnalyzer
-from taxonomy import Category
+from taxonomy import Category, resolve
+from models import Planet
 
 
 def test_loan_application_question():
@@ -37,4 +38,22 @@ def test_relationship_houses():
     assert q_type is Category.RELATIONSHIP
     houses, _ = analyzer._determine_houses(question_lower, q_type, None)
     assert houses == [1, 7]
+
+
+def test_health_question_houses():
+    analyzer = TraditionalHoraryQuestionAnalyzer()
+    question = "Will I recover from this illness?"
+    result = analyzer.analyze_question(question)
+
+    assert result["question_type"] is Category.HEALTH
+    assert result["relevant_houses"] == [1, 6]
+
+    class DummyChart:
+        def __init__(self):
+            self.house_rulers = {1: Planet.SUN, 6: Planet.MARS}
+
+    chart = DummyChart()
+    resolved = resolve(chart, result["question_type"], manual_houses=result["relevant_houses"])
+    assert resolved["querent_house"] == 1
+    assert resolved["quesited_house"] == 6
 

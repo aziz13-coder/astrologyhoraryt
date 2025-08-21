@@ -533,10 +533,10 @@ class TraditionalHoraryQuestionAnalyzer:
                 
         elif question_type == Category.CAREER:
             houses.append(10)  # Career/reputation/profession
-            
+
         elif question_type == Category.HEALTH:
             # ENHANCED: Health questions use L1/L6 axis (self vs illness)
-            houses.extend([1, 6])  # L1 = self/vitality, L6 = illness/disease
+            houses.append(6)  # L1 already added; L6 = illness/disease
                 
         elif question_type == Category.LAWSUIT:
             houses.append(7)  # Open enemies/legal opponents
