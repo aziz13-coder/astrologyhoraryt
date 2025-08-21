@@ -145,6 +145,52 @@ def _structure_reasoning(reasoning: List[Any]) -> List[Dict[str, Any]]:
     return structured
 
 
+def _evaluate_enhanced(
+    scoring: List[Dict[str, Any]], category_rules: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Compute confidence from weighted rules with category awareness.
+
+    Parameters
+    ----------
+    scoring:
+        Sequence of dicts containing at minimum ``rule`` and ``weight`` keys.
+        Optional ``house`` and ``factor`` keys allow filtering by the active
+        category ruleset.
+    category_rules:
+        Rule mapping retrieved via ``get_category_rules`` describing which
+        houses and factors are permitted to contribute to the score.
+
+    Returns
+    -------
+    Dict[str, Any]
+        ``score``     -- raw summed weight after filtering
+        ``confidence``-- normalized percentage via sigmoid
+        ``trace``     -- simplified list of ``{rule, weight}`` pairs actually
+                          included in the calculation
+    """
+
+    allowed_houses = set(category_rules.get("outcome_houses", []))
+    allowed_factors = set(category_rules.get("scored_factors", []))
+
+    total = 0.0
+    trace: List[Dict[str, Any]] = []
+    for entry in scoring:
+        weight = float(entry.get("weight", 0) or 0)
+        factor = entry.get("factor")
+        house = entry.get("house")
+
+        if factor and allowed_factors and factor not in allowed_factors:
+            continue
+        if house and allowed_houses and house not in allowed_houses:
+            continue
+
+        trace.append({"rule": entry.get("rule", ""), "weight": weight})
+        total += weight
+
+    confidence = 1.0 / (1.0 + math.exp(-total)) * 100.0
+    return {"score": total, "confidence": confidence, "trace": trace}
+
+
 def extract_testimonies(chart: HoraryChart, contract: Dict[str, Planet]) -> List[Any]:
     """Extract DSL primitives from a chart using significator contract.
 
@@ -1154,7 +1200,13 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                 ignore_radicality, ignore_void_moon, ignore_combustion, ignore_saturn_7th,
                 exaltation_confidence_boost, window_days)
 
-            judgment["reasoning"] = _structure_reasoning(judgment.get("reasoning", []))
+            structured_reasoning = _structure_reasoning(judgment.get("reasoning", []))
+            question_type = resolve_category(question_analysis.get("question_type"))
+            category_rules = get_category_rules(question_type)
+            evaluation = _evaluate_enhanced(structured_reasoning, category_rules)
+            judgment["reasoning"] = structured_reasoning
+            judgment["confidence"] = int(evaluation["confidence"])
+            judgment["scoring_trace"] = evaluation["trace"]
 
             # Serialize chart data for frontend
             chart_data_serialized = serialize_chart_for_frontend(chart, chart.solar_analyses)
@@ -1167,6 +1219,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                 "judgment": judgment["result"],
                 "confidence": judgment["confidence"],
                 "reasoning": judgment["reasoning"],
+                "scoring_trace": judgment.get("scoring_trace", []),
                 
                 "chart_data": chart_data_serialized,
                 
