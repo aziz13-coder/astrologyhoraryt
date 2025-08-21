@@ -11,6 +11,7 @@ from horary_engine.aggregator import aggregate
 from horary_engine.rationale import build_rationale
 from horary_engine.polarity import Polarity
 from horary_engine.engine import extract_testimonies
+from rule_engine import get_rule_weight
 from models import Planet, Aspect, PlanetPosition, HoraryChart, Sign, AspectInfo
 
 
@@ -59,16 +60,28 @@ def test_new_tokens_scoring_and_rationale():
         TestimonyKey.MOON_APPLYING_OPPOSITION_L1,
     ]
     score, ledger = aggregate(tokens)
-    assert score == 0.0
-    sextile_entry = next(e for e in ledger if e["key"] == TestimonyKey.MOON_APPLYING_SEXTILE_EXAMINER_SUN)
+    sextile_weight = abs(get_rule_weight("M3"))
+    opposition_weight = abs(get_rule_weight("M7"))
+    assert score == sextile_weight - opposition_weight
+    sextile_entry = next(
+        e for e in ledger if e["key"] == TestimonyKey.MOON_APPLYING_SEXTILE_EXAMINER_SUN
+    )
     assert sextile_entry["polarity"] is Polarity.POSITIVE
-    assert sextile_entry["delta_yes"] == 1.0
-    opposition_entry = next(e for e in ledger if e["key"] == TestimonyKey.MOON_APPLYING_OPPOSITION_L1)
+    assert sextile_entry["delta_yes"] == sextile_weight
+    opposition_entry = next(
+        e for e in ledger if e["key"] == TestimonyKey.MOON_APPLYING_OPPOSITION_L1
+    )
     assert opposition_entry["polarity"] is Polarity.NEGATIVE
-    assert opposition_entry["delta_no"] == 1.0
+    assert opposition_entry["delta_no"] == opposition_weight
     rationale = build_rationale(ledger)
-    assert f"{TestimonyKey.MOON_APPLYING_SEXTILE_EXAMINER_SUN.value} (+1.0)" in rationale
-    assert f"{TestimonyKey.MOON_APPLYING_OPPOSITION_L1.value} (-1.0)" in rationale
+    assert (
+        f"{TestimonyKey.MOON_APPLYING_SEXTILE_EXAMINER_SUN.value} (+{sextile_weight})"
+        in rationale
+    )
+    assert (
+        f"{TestimonyKey.MOON_APPLYING_OPPOSITION_L1.value} (-{opposition_weight})"
+        in rationale
+    )
 
 
 def test_extract_testimonies_emits_tokens():

@@ -23,6 +23,10 @@ rules:
     tier: perfection
     description: Translation of light
     weight: 2.0
+  - id: P3
+    tier: perfection
+    description: Collection of light
+    weight: 2.0
   - id: S1
     tier: special_topics
     description: Education overrides
@@ -31,14 +35,42 @@ rules:
     tier: special_topics
     description: Medical exceptions
     weight: 1.5
+  - id: F1
+    tier: special_topics
+    description: L10 fortunate
+    weight: 1.7
   - id: M1
     tier: moon
     description: Moon trine Sun
     weight: 1.8
   - id: M2
     tier: moon
-    description: Moon square Saturn
+    description: Moon square Sun
     weight: -2.2
+  - id: M3
+    tier: moon
+    description: Moon sextile Sun
+    weight: 1.2
+  - id: M4
+    tier: moon
+    description: Moon sextile L1
+    weight: 1.1
+  - id: M5
+    tier: moon
+    description: Moon sextile L7
+    weight: 1.1
+  - id: M6
+    tier: moon
+    description: Moon opposition Sun
+    weight: -1.4
+  - id: M7
+    tier: moon
+    description: Moon opposition L1
+    weight: -1.3
+  - id: M8
+    tier: moon
+    description: Moon opposition L7
+    weight: -1.2
   - id: MOD1
     tier: modifiers
     description: Reception boost

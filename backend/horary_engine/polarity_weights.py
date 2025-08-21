@@ -34,6 +34,25 @@ class TestimonyKey(Enum):
 TestimonyKey.__test__ = False
 
 
+# Mapping of testimony tokens to rule identifiers used for weight lookup
+TOKEN_RULE_MAP: dict[TestimonyKey, str] = {
+    TestimonyKey.MOON_APPLYING_TRINE_EXAMINER_SUN: "M1",
+    TestimonyKey.MOON_APPLYING_SQUARE_EXAMINER_SUN: "M2",
+    TestimonyKey.MOON_APPLYING_SEXTILE_EXAMINER_SUN: "M3",
+    TestimonyKey.MOON_APPLYING_SEXTILE_L1: "M4",
+    TestimonyKey.MOON_APPLYING_SEXTILE_L7: "M5",
+    TestimonyKey.MOON_APPLYING_OPPOSITION_EXAMINER_SUN: "M6",
+    TestimonyKey.MOON_APPLYING_OPPOSITION_L1: "M7",
+    TestimonyKey.MOON_APPLYING_OPPOSITION_L7: "M8",
+    TestimonyKey.L10_FORTUNATE: "F1",
+    TestimonyKey.PERFECTION_DIRECT: "P1",
+    TestimonyKey.PERFECTION_TRANSLATION_OF_LIGHT: "P2",
+    TestimonyKey.PERFECTION_COLLECTION_OF_LIGHT: "P3",
+    TestimonyKey.ESSENTIAL_DETRIMENT: "MOD2",
+    TestimonyKey.ACCIDENTAL_RETROGRADE: "MOD3",
+}
+
+
 POLARITY_TABLE: dict[TestimonyKey, Polarity] = {
     # Favorable Moon applying trine to the examiner (Sun in education questions)
     TestimonyKey.MOON_APPLYING_TRINE_EXAMINER_SUN: Polarity.POSITIVE,
@@ -59,21 +78,7 @@ POLARITY_TABLE: dict[TestimonyKey, Polarity] = {
 }
 
 WEIGHT_TABLE: dict[TestimonyKey, float] = {
-    TestimonyKey.MOON_APPLYING_TRINE_EXAMINER_SUN: 1.0,
-    TestimonyKey.MOON_APPLYING_SQUARE_EXAMINER_SUN: 1.0,
-    TestimonyKey.MOON_APPLYING_SEXTILE_EXAMINER_SUN: 1.0,
-    TestimonyKey.MOON_APPLYING_SEXTILE_L1: 1.0,
-    TestimonyKey.MOON_APPLYING_SEXTILE_L7: 1.0,
-    TestimonyKey.MOON_APPLYING_OPPOSITION_EXAMINER_SUN: 1.0,
-    TestimonyKey.MOON_APPLYING_OPPOSITION_L1: 1.0,
-    TestimonyKey.MOON_APPLYING_OPPOSITION_L7: 1.0,
-    TestimonyKey.L10_FORTUNATE: 1.0,
-    TestimonyKey.PERFECTION_DIRECT: 1.0,
-    TestimonyKey.PERFECTION_TRANSLATION_OF_LIGHT: 1.0,
-    TestimonyKey.PERFECTION_COLLECTION_OF_LIGHT: 1.0,
-    # Debility weights sourced from rule pack
-    TestimonyKey.ESSENTIAL_DETRIMENT: abs(get_rule_weight("MOD2")),
-    TestimonyKey.ACCIDENTAL_RETROGRADE: abs(get_rule_weight("MOD3")),
+    token: abs(get_rule_weight(rule_id)) for token, rule_id in TOKEN_RULE_MAP.items()
 }
 
 
