@@ -34,3 +34,14 @@ aggregator:
 
 Custom projects can adjust these values to tune the baseline importance
 of each role.
+
+### Translation and Collection tokens
+
+Translations and collections of light now generate tokens that encode the
+aspect type and whether reception is present. The dispatcher produces
+names following the pattern `TRANSLATION_<ASPECT>_<WITH|WITHOUT>_RECEPTION`
+and `COLLECTION_<ASPECT>_<WITH|WITHOUT>_RECEPTION`. All such testimonies
+have a default absolute weight of `2.0`. Tokens with square or opposition
+aspects without reception count as negative testimony; all others are
+positive. Each dispatched entry also reports whether the aspect is
+applying via an `applying` flag in the ledger.

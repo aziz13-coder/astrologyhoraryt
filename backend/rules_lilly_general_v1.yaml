@@ -23,6 +23,10 @@ rules:
     tier: perfection
     description: Translation of light
     weight: 2.0
+  - id: P2_NEG
+    tier: perfection
+    description: Translation of light (negative)
+    weight: -2.0
   - id: S1
     tier: special_topics
     description: Education overrides
@@ -91,6 +95,10 @@ rules:
     tier: perfection
     description: Collection of light
     weight: 2.0
+  - id: P3_NEG
+    tier: perfection
+    description: Collection of light (negative)
+    weight: -2.0
   - id: LC1
     tier: testimonies
     description: L10 fortunate

@@ -13,6 +13,7 @@ LQ = dsl.LQ
 aspect = dsl.aspect
 translation = dsl.translation
 reception = dsl.reception
+collection = dsl.collection
 
 TestimonyKey = polarity_weights.TestimonyKey
 TOKEN_RULE_MAP = polarity_weights.TOKEN_RULE_MAP
@@ -72,16 +73,27 @@ def test_dsl_aspect_dispatch():
 
 
 def test_dsl_translation_dispatch():
-    testimonies = [translation(Moon, L1, Planet.SUN)]
+    testimonies = [
+        translation(Moon, L1, Planet.SUN, AspectType.SQUARE, True)
+    ]
     contract = {"querent": Planet.MERCURY}
     score, ledger = solar_aggregate(testimonies, contract)
-    expected = abs(
-        get_rule_weight(
-            TOKEN_RULE_MAP[TestimonyKey.PERFECTION_TRANSLATION_OF_LIGHT]
-        )
-    )
+    token = TestimonyKey.TRANSLATION_SQUARE_WITH_RECEPTION
+    expected = abs(get_rule_weight(TOKEN_RULE_MAP[token]))
     assert score == expected
-    assert ledger[0]["key"] is TestimonyKey.PERFECTION_TRANSLATION_OF_LIGHT
+    assert ledger[0]["key"] is token
+    assert ledger[0]["applying"] is True
+
+
+def test_dsl_collection_dispatch():
+    testimonies = [collection(Moon, L1, Planet.SUN, AspectType.TRINE)]
+    contract = {"querent": Planet.MERCURY}
+    score, ledger = solar_aggregate(testimonies, contract)
+    token = TestimonyKey.COLLECTION_TRINE_WITHOUT_RECEPTION
+    expected = abs(get_rule_weight(TOKEN_RULE_MAP[token]))
+    assert score == expected
+    assert ledger[0]["key"] is token
+    assert ledger[0]["applying"] is True
 
 
 def test_dsl_reception_dispatch():
