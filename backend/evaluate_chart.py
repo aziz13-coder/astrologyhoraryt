@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 import os
 from pathlib import Path
 import sys
@@ -17,13 +17,14 @@ from category_router import get_contract
 from horary_engine.engine import extract_testimonies
 from horary_engine.rationale import build_rationale
 from horary_engine.utils import token_to_string
-from horary_engine.serialization import serialize_primitive
+from horary_engine.serialization import serialize_primitive, deserialize_chart_for_evaluation
+from models import HoraryChart
 
 logger = logging.getLogger(__name__)
 
 
 def evaluate_chart(
-    chart: Dict[str, Any], use_dsl: Optional[bool] = None
+    chart: Union[Dict[str, Any], HoraryChart], use_dsl: Optional[bool] = None
 ) -> Dict[str, Any]:
     """Evaluate a horary chart and return verdict with diagnostics.
 
@@ -41,15 +42,36 @@ def evaluate_chart(
             ``aggregator.use_dsl`` setting. This makes it easy for API callers to
             supply a query or header flag without editing config files.
     """
-    contract = get_contract(chart.get("category", ""))
-    testimonies = extract_testimonies(chart, contract)
+    if isinstance(chart, dict):
+        contract = get_contract(chart.get("category", ""))
+        if "timezone_info" in chart:
+            chart_obj = deserialize_chart_for_evaluation(chart)
+        else:
+            chart_obj = chart
+    else:
+        contract = get_contract(getattr(chart, "category", ""))
+        chart_obj = chart
+
+    testimonies = extract_testimonies(chart_obj, contract)
+
+    config_obj = cfg()
+
+    def _cfg_get(path: str, default: Any = None):
+        if hasattr(config_obj, "get"):
+            return config_obj.get(path, default)
+        current = config_obj
+        for part in path.split("."):
+            current = getattr(current, part, None)
+            if current is None:
+                return default
+        return current
 
     if use_dsl is None:
         env_override = os.getenv("HORARY_USE_DSL")
         if env_override is not None:
             use_dsl = env_override.lower() in {"1", "true", "yes"}
         else:
-            use_dsl = cfg().get("aggregator.use_dsl", False)
+            use_dsl = _cfg_get("aggregator.use_dsl", False)
 
     if use_dsl:
         from horary_engine.dsl import (
@@ -63,21 +85,11 @@ def evaluate_chart(
         from horary_engine.solar_aggregator import aggregate as aggregator_fn
 
         testimonies = [
-            role_importance(
-                L1, cfg().get("aggregator.role_importance.L1", 1.0)
-            ),
-            role_importance(
-                LQ, cfg().get("aggregator.role_importance.LQ", 1.0)
-            ),
-            role_importance(
-                Moon, cfg().get("aggregator.role_importance.Moon", 0.7)
-            ),
-            role_importance(
-                L10, cfg().get("aggregator.role_importance.L10", 1.0)
-            ),
-            role_importance(
-                L3, cfg().get("aggregator.role_importance.L3", 1.0)
-            ),
+            role_importance(L1, _cfg_get("aggregator.role_importance.L1", 1.0)),
+            role_importance(LQ, _cfg_get("aggregator.role_importance.LQ", 1.0)),
+            role_importance(Moon, _cfg_get("aggregator.role_importance.Moon", 0.7)),
+            role_importance(L10, _cfg_get("aggregator.role_importance.L10", 1.0)),
+            role_importance(L3, _cfg_get("aggregator.role_importance.L3", 1.0)),
             *testimonies,
         ]
     else:
