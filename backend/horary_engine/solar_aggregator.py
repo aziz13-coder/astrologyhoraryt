@@ -59,6 +59,7 @@ def aggregate(
 
     raw_items: List[TestimonyKey | str | RoleImportance] = []
     extra_info: Dict[TestimonyKey | str, Dict[str, Any]] = {}
+    unscored: List[Any] = []
     for raw in testimonies:
         dispatched = dsl_dispatch(raw, contract)
         if dispatched:
@@ -68,6 +69,7 @@ def aggregate(
                 extra_info[token] = {k: v for k, v in entry.items() if k != "key"}
         else:
             raw_items.append(raw)
+            unscored.append(raw)
 
     tokens, role_weights = _coerce(raw_items)
 
@@ -123,6 +125,18 @@ def aggregate(
         if token in extra_info:
             entry.update(extra_info[token])
         ledger.append(entry)
+
+    for obj in unscored:
+        ledger.append(
+            {
+                "key": obj,
+                "polarity": Polarity.NEUTRAL,
+                "weight": 0.0,
+                "delta_yes": 0.0,
+                "delta_no": 0.0,
+                "primitive": obj,
+            }
+        )
 
     total = total_yes - total_no
     return total, ledger
