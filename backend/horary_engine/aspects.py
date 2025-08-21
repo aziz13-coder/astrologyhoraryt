@@ -94,11 +94,21 @@ def calculate_moon_next_aspect(
     moon_speed = get_moon_speed(jd_ut)
     moon_days_to_exit = days_to_sign_exit(moon_pos.longitude, moon_speed)
 
+    # Only consider classical planets as targets
+    classical_targets = {
+        Planet.SUN,
+        Planet.MERCURY,
+        Planet.VENUS,
+        Planet.MARS,
+        Planet.JUPITER,
+        Planet.SATURN,
+    }
+
     # Find closest applying aspect
     applying_aspects: List[LunarAspect] = []
 
     for planet, planet_pos in planets.items():
-        if planet == Planet.MOON:
+        if planet not in classical_targets:
             continue
 
         # Calculate current separation using signed delta

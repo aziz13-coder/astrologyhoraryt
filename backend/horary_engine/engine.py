@@ -3196,101 +3196,45 @@ class EnhancedTraditionalHoraryJudgmentEngine:
         moon_pos = chart.planets[Planet.MOON]
         config = cfg()
 
-        # Calculate degrees and days left in current sign
+        # Calculate degrees left in current sign
         moon_degree_in_sign = moon_pos.longitude % 30
         degrees_left_in_sign = 30 - moon_degree_in_sign
-        moon_days_to_exit = days_to_sign_exit(moon_pos.longitude, moon_pos.speed)
-        
+
         # Check if Moon is stationary (cannot be void if not moving)
         if abs(moon_pos.speed) < config.timing.stationary_speed_threshold:
             return {
                 "void": False,
                 "exception": False,
                 "reason": "Moon stationary - cannot be void of course",
-                "degrees_left_in_sign": degrees_left_in_sign
+                "degrees_left_in_sign": degrees_left_in_sign,
+                "first_applying_aspect": None,
             }
-        
-        # Classical planets only (exclude ASC/MC)
-        classical_planets = [Planet.SUN, Planet.MERCURY, Planet.VENUS, Planet.MARS, Planet.JUPITER, Planet.SATURN]
-        
-        # Ptolemaic aspects only
-        ptolemaic_aspects = [Aspect.CONJUNCTION, Aspect.SEXTILE, Aspect.SQUARE, Aspect.TRINE, Aspect.OPPOSITION]
-        
-        future_applications = []
-        
-        for planet in classical_planets:
-            if planet not in chart.planets:
-                continue
 
-            planet_pos = chart.planets[planet]
-            planet_days_to_exit = days_to_sign_exit(planet_pos.longitude, planet_pos.speed)
+        # Determine next lunar aspect using analytic helper
+        moon_next_aspect = calculate_moon_next_aspect(
+            chart.planets,
+            chart.julian_day,
+            self.calculator.get_real_moon_speed,
+        )
 
-            for aspect_type in ptolemaic_aspects:
-                # Calculate when perfection occurs using analytic solver
-                days_to_perfection = self._calculate_future_aspect_time(
-                    moon_pos,
-                    planet_pos,
-                    aspect_type,
-                    chart.julian_day,
-                    config.timing.max_future_days,
-                )
+        if moon_next_aspect is None:
+            return {
+                "void": True,
+                "exception": False,
+                "reason": f"Moon makes no applying aspects before leaving {moon_pos.sign.sign_name}",
+                "degrees_left_in_sign": degrees_left_in_sign,
+                "first_applying_aspect": None,
+            }
 
-                # Reject invalid times
-                if days_to_perfection is None or days_to_perfection <= 0:
-                    continue
-
-                # Ensure perfection occurs before either body leaves its sign
-                if (
-                    moon_days_to_exit is not None
-                    and days_to_perfection >= moon_days_to_exit
-                ):
-                    continue
-                if (
-                    planet_days_to_exit is not None
-                    and days_to_perfection >= planet_days_to_exit
-                ):
-                    continue
-
-                future_moon_lon = (moon_pos.longitude + moon_pos.speed * days_to_perfection) % 360
-                future_planet_lon = (planet_pos.longitude + planet_pos.speed * days_to_perfection) % 360
-                if int(future_moon_lon // 30) != int(moon_pos.longitude // 30):
-                    continue
-                if int(future_planet_lon // 30) != int(planet_pos.longitude // 30):
-                    continue
-
-                current_separation = abs(moon_pos.longitude - planet_pos.longitude)
-                if current_separation > 180:
-                    current_separation = 360 - current_separation
-
-                orb_from_exact = abs(current_separation - aspect_type.degrees)
-                if orb_from_exact > 180:
-                    orb_from_exact = 360 - orb_from_exact
-
-                future_applications.append(
-                    {
-                        "planet": planet,
-                        "aspect": aspect_type,
-                        "orb": orb_from_exact,
-                        "days_to_perfection": days_to_perfection,
-                        "perfects_in_sign": True,
-                    }
-                )
-        
-        # Moon is void if no future applications found
-        is_void = len(future_applications) == 0
-        
-        if is_void:
-            reason = f"Moon makes no applying aspects to classical planets before leaving {moon_pos.sign.sign_name}"
-        else:
-            next_app = min(future_applications, key=lambda x: x["days_to_perfection"])
-            reason = f"Moon will {next_app['aspect'].display_name.lower()} {next_app['planet'].value} in {next_app['days_to_perfection']:.1f} days"
-        
         return {
-            "void": is_void,
-            "exception": False,  # No exceptions in ground truth implementation
-            "reason": reason,
+            "void": False,
+            "exception": False,
+            "reason": (
+                f"Moon will {moon_next_aspect.aspect.display_name.lower()} "
+                f"{moon_next_aspect.planet.value} in {moon_next_aspect.perfection_eta_days:.1f} days"
+            ),
             "degrees_left_in_sign": degrees_left_in_sign,
-            "future_applications": future_applications
+            "first_applying_aspect": moon_next_aspect,
         }
     
     # REMOVED: Old configurable void methods replaced with ground truth implementation
