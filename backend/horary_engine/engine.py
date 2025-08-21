@@ -302,6 +302,29 @@ def extract_testimonies(chart: HoraryChart, contract: Dict[str, Planet]) -> List
         for dignity in reception_result.get("planet2_receives_planet1", []):
             primitives.append(dsl_reception(sig2, sig1, dignity))
 
+    # ------------------------------------------------------------------
+    # House lord conditions for key topics
+    # ------------------------------------------------------------------
+    house_map = {
+        7: (TestimonyKey.L7_FORTUNATE, TestimonyKey.L7_MALIFIC_DEBILITY),
+        2: (TestimonyKey.L2_FORTUNATE, TestimonyKey.L2_MALIFIC_DEBILITY),
+        8: (TestimonyKey.L8_FORTUNATE, TestimonyKey.L8_MALIFIC_DEBILITY),
+        5: (TestimonyKey.L5_FORTUNATE, TestimonyKey.L5_MALIFIC_DEBILITY),
+    }
+    benefics = {Planet.JUPITER, Planet.VENUS}
+    malefics = {Planet.MARS, Planet.SATURN}
+    for house, (pos_key, neg_key) in house_map.items():
+        ruler = chart.house_rulers.get(house)
+        if not ruler:
+            continue
+        position = chart.planets.get(ruler)
+        if not position:
+            continue
+        if ruler in benefics or position.dignity_score >= 5:
+            primitives.append(pos_key)
+        if ruler in malefics or position.dignity_score <= -5:
+            primitives.append(neg_key)
+
     return primitives
 
 
