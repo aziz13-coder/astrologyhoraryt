@@ -47,7 +47,7 @@ def test_moon_venus_conjunction_time_applying():
     t = calc._calculate_future_aspect_time(moon, venus, Aspect.CONJUNCTION, 0.0, 10)
     assert t is not None
     assert abs(t - 0.021) < 0.005
-    assert is_applying_enhanced(moon, venus, Aspect.CONJUNCTION, 0.0)
+    assert is_applying_enhanced(moon, venus, Aspect.CONJUNCTION, 0.0)[0]
 
 
 def test_fast_behind_slow_positive_time():
@@ -65,5 +65,16 @@ def test_mercury_rx_applying_to_venus():
     mercury_rx = make_pos(Planet.MERCURY, 14.0, -1.2)
     venus = make_pos(Planet.VENUS, 12.0, 1.0)
 
-    assert is_applying_enhanced(mercury_rx, venus, Aspect.CONJUNCTION, 0.0)
-    assert is_applying_enhanced(venus, mercury_rx, Aspect.CONJUNCTION, 0.0)
+    assert is_applying_enhanced(mercury_rx, venus, Aspect.CONJUNCTION, 0.0)[0]
+    assert is_applying_enhanced(venus, mercury_rx, Aspect.CONJUNCTION, 0.0)[0]
+
+
+def test_applying_cross_sign_flag():
+    venus = make_pos(Planet.VENUS, 115.0, 1.0)
+    saturn = make_pos(Planet.SATURN, 0.0, -0.05)
+
+    applying, within_sign = is_applying_enhanced(
+        venus, saturn, Aspect.OPPOSITION, 0.0
+    )
+    assert applying
+    assert not within_sign

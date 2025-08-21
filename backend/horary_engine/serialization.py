@@ -128,6 +128,7 @@ def serialize_chart_for_frontend(
                 "aspect": aspect.aspect.display_name,
                 "orb": round(aspect.orb, 2),
                 "applying": aspect.applying,
+                "perfection_within_sign": aspect.perfection_within_sign,
                 "degrees_to_exact": round(aspect.degrees_to_exact, 2),
                 "exact_time": aspect.exact_time.isoformat() if aspect.exact_time else None,
             }

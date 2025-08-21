@@ -131,9 +131,10 @@ def calculate_moon_next_aspect(
             max_orb = aspect_type.orb
 
             if orb_diff <= max_orb:
-                if is_applying_enhanced(
+                applying, within_sign = is_applying_enhanced(
                     moon_pos, planet_pos, aspect_type, jd_ut
-                ):
+                )
+                if applying:
                     degrees_to_exact = orb_diff
                     relative_speed = moon_speed - planet_pos.speed
                     time_to_exact = (
@@ -146,7 +147,7 @@ def calculate_moon_next_aspect(
                     if (
                         moon_days_to_exit is not None
                         and time_to_exact > moon_days_to_exit
-                    ):
+                    ) or not within_sign:
                         continue
 
                     applying_aspects.append(
@@ -178,7 +179,8 @@ def is_moon_separating_from_aspect(
 ) -> bool:
     """Thin wrapper around :func:`is_applying_enhanced` for backward compatibility."""
 
-    if is_applying_enhanced(moon_pos, planet_pos, aspect, jd_ut):
+    applying, _ = is_applying_enhanced(moon_pos, planet_pos, aspect, jd_ut)
+    if applying:
         return False
     return _orb_motion(moon_pos, planet_pos, aspect) > 0
 
@@ -191,7 +193,8 @@ def is_moon_applying_to_aspect(
 ) -> bool:
     """Thin wrapper around :func:`is_applying_enhanced` for backward compatibility."""
 
-    return is_applying_enhanced(moon_pos, planet_pos, aspect, jd_ut)
+    applying, _ = is_applying_enhanced(moon_pos, planet_pos, aspect, jd_ut)
+    return applying
 
 
 def format_timing_description(days: float) -> str:
@@ -245,7 +248,9 @@ def calculate_enhanced_aspects(
 
                 if orb_diff <= max_orb:
                     # Determine if applying
-                    applying = is_applying_enhanced(pos1, pos2, aspect_type, jd_ut)
+                    applying, within_sign = is_applying_enhanced(
+                        pos1, pos2, aspect_type, jd_ut
+                    )
 
                     # Calculate degrees to exact and timing
                     degrees_to_exact, exact_time = calculate_enhanced_degrees_to_exact(
@@ -259,6 +264,7 @@ def calculate_enhanced_aspects(
                             aspect=aspect_type,
                             orb=orb_diff,
                             applying=applying,
+                            perfection_within_sign=within_sign,
                             exact_time=exact_time,
                             degrees_to_exact=degrees_to_exact,
                         )
@@ -301,8 +307,13 @@ def calculate_moiety_based_orb(
 
 def is_applying_enhanced(
     pos1: PlanetPosition, pos2: PlanetPosition, aspect: Aspect, jd_ut: float
-) -> bool:
-    """Determine if planets are applying to a given aspect analytically."""
+) -> Tuple[bool, bool]:
+    """Determine applying status and sign perfection flag.
+
+    Returns a tuple ``(applying, perfection_within_sign)`` where ``applying``
+    is ``True`` if the orb is shrinking and ``perfection_within_sign`` indicates
+    whether the aspect perfects before either planet changes signs.
+    """
 
     diff = (
         _signed_longitude_delta(pos1.longitude, pos2.longitude)
@@ -311,11 +322,12 @@ def is_applying_enhanced(
     ) % 360 - 180
     current_orb = abs(diff)
 
-    # Check sign exit conditions (preserve traditional horary rules)
-    if not _will_perfect_before_sign_exit(pos1, pos2, aspect, current_orb):
-        return False
+    applying = _orb_motion(pos1, pos2, aspect) < 0
+    perfection_within_sign = _will_perfect_before_sign_exit(
+        pos1, pos2, aspect, current_orb
+    )
 
-    return _orb_motion(pos1, pos2, aspect) < 0
+    return applying, perfection_within_sign
 
 
 def _calculate_orb_to_aspect(pos1: PlanetPosition, pos2: PlanetPosition, aspect: Aspect) -> float:
