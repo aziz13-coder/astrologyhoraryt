@@ -6,6 +6,7 @@ from typing import Any, Dict, Optional
 import os
 from pathlib import Path
 import sys
+from dataclasses import is_dataclass
 
 # Ensure repository root on path when executed directly
 sys.path.append(str(Path(__file__).resolve().parents[1]))
@@ -16,6 +17,7 @@ from category_router import get_contract
 from horary_engine.engine import extract_testimonies
 from horary_engine.rationale import build_rationale
 from horary_engine.utils import token_to_string
+from horary_engine.serialization import serialize_primitive
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +83,10 @@ def evaluate_chart(
     else:
         from horary_engine.aggregator import aggregate as aggregator_fn
 
+    dsl_primitives = [
+        serialize_primitive(t) for t in testimonies if is_dataclass(t)
+    ]
+
     score, ledger = aggregator_fn(testimonies, contract)
     # Surface ledger details for downstream inspection and debugging
     logger.info(
@@ -92,7 +98,12 @@ def evaluate_chart(
     )
     rationale = build_rationale(ledger)
     verdict = "YES" if score > 0 else "NO"
-    return {"verdict": verdict, "ledger": ledger, "rationale": rationale}
+    return {
+        "verdict": verdict,
+        "ledger": ledger,
+        "rationale": rationale,
+        "dsl_primitives": dsl_primitives,
+    }
 
 
 if __name__ == "__main__":
