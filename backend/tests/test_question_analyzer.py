@@ -57,3 +57,13 @@ def test_health_question_houses():
     assert resolved["querent_house"] == 1
     assert resolved["quesited_house"] == 6
 
+
+def test_partner_healing_question():
+    analyzer = TraditionalHoraryQuestionAnalyzer()
+    question = "Will my partner heal and grow through therapy?"
+    question_lower = question.lower()
+    q_type, _ = analyzer._determine_question_type(question_lower)
+    assert q_type is Category.PARTNER_HEALING
+    houses, _ = analyzer._determine_houses(question_lower, q_type, None)
+    assert houses == [7, 12]
+
