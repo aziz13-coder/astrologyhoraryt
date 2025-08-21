@@ -1,49 +1,21 @@
-from pathlib import Path
-import sys
-import types
-import importlib.util
-
-ROOT = Path(__file__).resolve().parents[2]
-MODULE_DIR = ROOT / "backend" / "horary_engine"
-sys.path.append(str(ROOT / "backend"))
-
-# Create lightweight package to avoid heavy initialization
-pkg = types.ModuleType("horary_engine")
-pkg.__path__ = [str(MODULE_DIR)]
-sys.modules["horary_engine"] = pkg
-
-
-def _load(name: str):
-    spec = importlib.util.spec_from_file_location(
-        f"horary_engine.{name}", MODULE_DIR / f"{name}.py"
-    )
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[f"horary_engine.{name}"] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-polarity_weights = _load("polarity_weights")
-dsl = _load("dsl")
-_load("dsl_to_testimony")
-solar_aggregator_module = _load("solar_aggregator")
-aggregator_module = _load("aggregator")
+import horary_engine.polarity_weights as polarity_weights
+import horary_engine.dsl as dsl
+from horary_engine.solar_aggregator import aggregate as solar_aggregate
+from horary_engine.aggregator import aggregate as legacy_aggregate
+from models import Planet, Aspect as AspectType
+from rule_engine import get_rule_weight
 
 role_importance = dsl.role_importance
 Moon = dsl.Moon
 L1 = dsl.L1
 L10 = dsl.L10
+LQ = dsl.LQ
 aspect = dsl.aspect
 translation = dsl.translation
 reception = dsl.reception
 
-from models import Planet, Aspect as AspectType
-from rule_engine import get_rule_weight
-
 TestimonyKey = polarity_weights.TestimonyKey
 TOKEN_RULE_MAP = polarity_weights.TOKEN_RULE_MAP
-solar_aggregate = solar_aggregator_module.aggregate
-legacy_aggregate = aggregator_module.aggregate
 
 
 def test_role_importance_scales_weights():
@@ -101,7 +73,8 @@ def test_dsl_aspect_dispatch():
 
 def test_dsl_translation_dispatch():
     testimonies = [translation(Moon, L1, Planet.SUN)]
-    score, ledger = solar_aggregate(testimonies)
+    contract = {"querent": Planet.MERCURY}
+    score, ledger = solar_aggregate(testimonies, contract)
     expected = abs(
         get_rule_weight(
             TOKEN_RULE_MAP[TestimonyKey.PERFECTION_TRANSLATION_OF_LIGHT]
@@ -113,7 +86,21 @@ def test_dsl_translation_dispatch():
 
 def test_dsl_reception_dispatch():
     testimonies = [reception(L10, L1, "mutual")]
-    score, ledger = solar_aggregate(testimonies)
+    contract = {"querent": Planet.MERCURY, "l10": Planet.SUN}
+    score, ledger = solar_aggregate(testimonies, contract)
     expected = abs(get_rule_weight(TOKEN_RULE_MAP[TestimonyKey.L10_FORTUNATE]))
     assert score == expected
     assert ledger[0]["key"] is TestimonyKey.L10_FORTUNATE
+
+
+def test_generated_aspect_token_with_role_weights():
+    contract = {"querent": Planet.MERCURY, "quesited": Planet.JUPITER, "quesited_house": 7}
+    testimonies = [
+        role_importance(L1, 0.5),
+        role_importance(LQ, 0.5),
+        aspect(L1, LQ, AspectType.TRINE),
+    ]
+    score, ledger = solar_aggregate(testimonies, contract)
+    assert score == 0.0
+    assert ledger[0]["key"] == "ASPECT_L1_TRINE_L7"
+    assert ledger[0]["role_factor"] == 0.25
