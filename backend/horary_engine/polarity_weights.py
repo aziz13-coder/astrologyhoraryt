@@ -34,6 +34,26 @@ class TestimonyKey(Enum):
     PERFECTION_DIRECT = "perfection_direct"
     PERFECTION_TRANSLATION_OF_LIGHT = "perfection_translation_of_light"
     PERFECTION_COLLECTION_OF_LIGHT = "perfection_collection_of_light"
+    TRANSLATION_CONJUNCTION_WITH_RECEPTION = "translation_conjunction_with_reception"
+    TRANSLATION_CONJUNCTION_WITHOUT_RECEPTION = "translation_conjunction_without_reception"
+    TRANSLATION_SEXTILE_WITH_RECEPTION = "translation_sextile_with_reception"
+    TRANSLATION_SEXTILE_WITHOUT_RECEPTION = "translation_sextile_without_reception"
+    TRANSLATION_SQUARE_WITH_RECEPTION = "translation_square_with_reception"
+    TRANSLATION_SQUARE_WITHOUT_RECEPTION = "translation_square_without_reception"
+    TRANSLATION_TRINE_WITH_RECEPTION = "translation_trine_with_reception"
+    TRANSLATION_TRINE_WITHOUT_RECEPTION = "translation_trine_without_reception"
+    TRANSLATION_OPPOSITION_WITH_RECEPTION = "translation_opposition_with_reception"
+    TRANSLATION_OPPOSITION_WITHOUT_RECEPTION = "translation_opposition_without_reception"
+    COLLECTION_CONJUNCTION_WITH_RECEPTION = "collection_conjunction_with_reception"
+    COLLECTION_CONJUNCTION_WITHOUT_RECEPTION = "collection_conjunction_without_reception"
+    COLLECTION_SEXTILE_WITH_RECEPTION = "collection_sextile_with_reception"
+    COLLECTION_SEXTILE_WITHOUT_RECEPTION = "collection_sextile_without_reception"
+    COLLECTION_SQUARE_WITH_RECEPTION = "collection_square_with_reception"
+    COLLECTION_SQUARE_WITHOUT_RECEPTION = "collection_square_without_reception"
+    COLLECTION_TRINE_WITH_RECEPTION = "collection_trine_with_reception"
+    COLLECTION_TRINE_WITHOUT_RECEPTION = "collection_trine_without_reception"
+    COLLECTION_OPPOSITION_WITH_RECEPTION = "collection_opposition_with_reception"
+    COLLECTION_OPPOSITION_WITHOUT_RECEPTION = "collection_opposition_without_reception"
     ESSENTIAL_DETRIMENT = "essential_detriment"
     ACCIDENTAL_RETROGRADE = "accidental_retrograde"
 
@@ -100,11 +120,6 @@ TOKEN_RULE_MAP: dict[TestimonyKey, str] = {
     TestimonyKey.ACCIDENTAL_RETROGRADE: "MOD3",
 }
 
-WEIGHT_TABLE: dict[TestimonyKey, float] = {
-    token: abs(get_rule_weight(rule_id))
-    for token, rule_id in TOKEN_RULE_MAP.items()
-}
-
 
 # ``family``/``kind`` tagging for group-based contribution control
 FAMILY_TABLE: dict[TestimonyKey, str] = {
@@ -133,5 +148,47 @@ KIND_TABLE: dict[TestimonyKey, str] = {
     TestimonyKey.L8_MALIFIC_DEBILITY: "l8",
     TestimonyKey.L5_FORTUNATE: "l5",
     TestimonyKey.L5_MALIFIC_DEBILITY: "l5",
+}
+
+# ---------------------------------------------------------------------------
+# Translation/Collection token configuration
+# ---------------------------------------------------------------------------
+
+ASPECTS = ["CONJUNCTION", "SEXTILE", "SQUARE", "TRINE", "OPPOSITION"]
+
+for aspect in ASPECTS:
+    t_with = getattr(TestimonyKey, f"TRANSLATION_{aspect}_WITH_RECEPTION")
+    t_without = getattr(TestimonyKey, f"TRANSLATION_{aspect}_WITHOUT_RECEPTION")
+    c_with = getattr(TestimonyKey, f"COLLECTION_{aspect}_WITH_RECEPTION")
+    c_without = getattr(TestimonyKey, f"COLLECTION_{aspect}_WITHOUT_RECEPTION")
+
+    # Translation tokens
+    POLARITY_TABLE[t_with] = Polarity.POSITIVE
+    POLARITY_TABLE[t_without] = (
+        Polarity.NEGATIVE if aspect in {"SQUARE", "OPPOSITION"} else Polarity.POSITIVE
+    )
+    TOKEN_RULE_MAP[t_with] = "P2"
+    TOKEN_RULE_MAP[t_without] = (
+        "P2_NEG" if POLARITY_TABLE[t_without] is Polarity.NEGATIVE else "P2"
+    )
+    FAMILY_TABLE[t_with] = FAMILY_TABLE[t_without] = "perfection"
+    KIND_TABLE[t_with] = KIND_TABLE[t_without] = "tol"
+
+    # Collection tokens
+    POLARITY_TABLE[c_with] = Polarity.POSITIVE
+    POLARITY_TABLE[c_without] = (
+        Polarity.NEGATIVE if aspect in {"SQUARE", "OPPOSITION"} else Polarity.POSITIVE
+    )
+    TOKEN_RULE_MAP[c_with] = "P3"
+    TOKEN_RULE_MAP[c_without] = (
+        "P3_NEG" if POLARITY_TABLE[c_without] is Polarity.NEGATIVE else "P3"
+    )
+    FAMILY_TABLE[c_with] = FAMILY_TABLE[c_without] = "perfection"
+    KIND_TABLE[c_with] = KIND_TABLE[c_without] = "col"
+
+
+# Weight table is derived from rule mappings
+WEIGHT_TABLE: dict[TestimonyKey, float] = {
+    token: abs(get_rule_weight(rule_id)) for token, rule_id in TOKEN_RULE_MAP.items()
 }
 

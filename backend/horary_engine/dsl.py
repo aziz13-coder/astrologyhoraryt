@@ -60,10 +60,20 @@ class Translation:
     translator: Actor
     from_actor: Actor
     to_actor: Actor
+    aspect: AspectType = AspectType.CONJUNCTION
+    reception: bool = False
+    applying: bool = True
 
 
-def translation(translator: Actor, from_actor: Actor, to_actor: Actor) -> Translation:
-    return Translation(translator, from_actor, to_actor)
+def translation(
+    translator: Actor,
+    from_actor: Actor,
+    to_actor: Actor,
+    aspect: AspectType = AspectType.CONJUNCTION,
+    reception: bool = False,
+    applying: bool = True,
+) -> Translation:
+    return Translation(translator, from_actor, to_actor, aspect, reception, applying)
 
 
 @dataclass
@@ -73,10 +83,20 @@ class Collection:
     collector: Actor
     actor1: Actor
     actor2: Actor
+    aspect: AspectType = AspectType.CONJUNCTION
+    reception: bool = False
+    applying: bool = True
 
 
-def collection(collector: Actor, actor1: Actor, actor2: Actor) -> Collection:
-    return Collection(collector, actor1, actor2)
+def collection(
+    collector: Actor,
+    actor1: Actor,
+    actor2: Actor,
+    aspect: AspectType = AspectType.CONJUNCTION,
+    reception: bool = False,
+    applying: bool = True,
+) -> Collection:
+    return Collection(collector, actor1, actor2, aspect, reception, applying)
 
 
 @dataclass

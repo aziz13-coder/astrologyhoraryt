@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 from .dsl import (
     Aspect,
     Translation,
+    Collection,
     Reception,
     EssentialDignity,
     Role,
@@ -42,7 +43,17 @@ def _role_tag(role: Role, contract: Dict[str, Planet]) -> str:
 
 def _collect_roles(obj: Any, contract: Dict[str, Planet]) -> Dict[str, Planet]:
     roles: Dict[str, Planet] = {}
-    for attr in ("actor", "receiver", "received", "translator", "from_actor", "to_actor", "actor1", "actor2"):
+    for attr in (
+        "actor",
+        "receiver",
+        "received",
+        "translator",
+        "from_actor",
+        "to_actor",
+        "actor1",
+        "actor2",
+        "collector",
+    ):
         value = getattr(obj, attr, None)
         if isinstance(value, Role):
             tag = _role_tag(value, contract).lower()
@@ -108,13 +119,34 @@ def dispatch(obj: Any, contract: Optional[Dict[str, Planet]] = None) -> List[Dis
         return _dispatch_aspect(obj, contract)
     if isinstance(obj, Translation):
         role_map = _collect_roles(obj, contract)
+        aspect_name = getattr(obj.aspect, "name", "CONJUNCTION")
+        reception_tag = "WITH_RECEPTION" if getattr(obj, "reception", False) else "WITHOUT_RECEPTION"
+        token_name = f"TRANSLATION_{aspect_name}_{reception_tag}"
+        key = getattr(TestimonyKey, token_name, TestimonyKey.PERFECTION_TRANSLATION_OF_LIGHT)
         return [
             {
-                "key": TestimonyKey.PERFECTION_TRANSLATION_OF_LIGHT,
+                "key": key,
                 "house": None,
                 "factor": 1.0,
                 "roles": list(role_map.keys()),
                 "planets": list(role_map.values()),
+                "applying": getattr(obj, "applying", True),
+            }
+        ]
+    if isinstance(obj, Collection):
+        role_map = _collect_roles(obj, contract)
+        aspect_name = getattr(obj.aspect, "name", "CONJUNCTION")
+        reception_tag = "WITH_RECEPTION" if getattr(obj, "reception", False) else "WITHOUT_RECEPTION"
+        token_name = f"COLLECTION_{aspect_name}_{reception_tag}"
+        key = getattr(TestimonyKey, token_name, TestimonyKey.PERFECTION_COLLECTION_OF_LIGHT)
+        return [
+            {
+                "key": key,
+                "house": None,
+                "factor": 1.0,
+                "roles": list(role_map.keys()),
+                "planets": list(role_map.values()),
+                "applying": getattr(obj, "applying", True),
             }
         ]
     if isinstance(obj, Reception):

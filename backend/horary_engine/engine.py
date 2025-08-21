@@ -323,11 +323,25 @@ def extract_testimonies(chart: HoraryChart, contract: Dict[str, Planet]) -> List
             )
             if result.get("type") == "translation":
                 primitives.append(
-                    dsl_translation(result["translator"], sig1, sig2)
+                    dsl_translation(
+                        result["translator"],
+                        sig1,
+                        sig2,
+                        result.get("aspect"),
+                        result.get("reception", False),
+                        True,
+                    )
                 )
             elif result.get("type") == "collection":
                 primitives.append(
-                    dsl_collection(result["collector"], sig1, sig2)
+                    dsl_collection(
+                        result["collector"],
+                        sig1,
+                        sig2,
+                        result.get("aspect"),
+                        result.get("reception", False),
+                        True,
+                    )
                 )
             elif result.get("prohibited"):
                 primitives.append(
