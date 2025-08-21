@@ -302,7 +302,8 @@ def check_aspect_separation_order(
     The previous implementation estimated the separation trend by looking one
     hour ahead. This fails for very slow or very fast planets. Instead we use
     the relative speed between the planets to analytically compute whether the
-    orb is widening or narrowing, similar to :func:`_moon_orb_motion`.
+    orb is widening or narrowing, using the same approach as
+    :func:`is_applying_enhanced`.
 
     Parameters
     ----------

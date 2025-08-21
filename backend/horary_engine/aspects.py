@@ -50,7 +50,7 @@ def calculate_moon_last_aspect(
             if orb_diff <= max_orb * 1.5:
                 # Check if separating (Moon was closer recently)
                 if is_moon_separating_from_aspect(
-                    moon_pos, planet_pos, aspect_type, moon_speed
+                    moon_pos, planet_pos, aspect_type, jd_ut
                 ):
                     degrees_since_exact = orb_diff
                     relative_speed = moon_speed - planet_pos.speed
@@ -120,8 +120,8 @@ def calculate_moon_next_aspect(
             max_orb = aspect_type.orb
 
             if orb_diff <= max_orb:
-                if is_moon_applying_to_aspect(
-                    moon_pos, planet_pos, aspect_type, moon_speed
+                if is_applying_enhanced(
+                    moon_pos, planet_pos, aspect_type, jd_ut
                 ):
                     degrees_to_exact = orb_diff
                     relative_speed = moon_speed - planet_pos.speed
@@ -159,47 +159,33 @@ def calculate_moon_next_aspect(
     return None
 
 
-def _moon_orb_motion(
-    moon_pos: PlanetPosition,
-    planet_pos: PlanetPosition,
-    aspect: Aspect,
-    moon_speed: float,
-) -> float:
-    """Return the signed rate of change of the orb between the Moon and a planet.
-
-    Positive values mean the orb is widening (separating), negative values mean
-    the orb is narrowing (applying).
-    """
-
-    # Signed difference from exact aspect in range [-180, 180)
-    diff = (moon_pos.longitude - planet_pos.longitude - aspect.degrees + 180) % 360 - 180
-
-    # Relative speed between the Moon and the other planet
-    relative_speed = moon_speed - planet_pos.speed
-
-    return diff * relative_speed
-
-
 def is_moon_separating_from_aspect(
     moon_pos: PlanetPosition,
     planet_pos: PlanetPosition,
     aspect: Aspect,
-    moon_speed: float,
+    jd_ut: float,
 ) -> bool:
-    """Check if the Moon is separating from an aspect using analytic motion."""
+    """Thin wrapper around :func:`is_applying_enhanced` for backward compatibility."""
 
-    return _moon_orb_motion(moon_pos, planet_pos, aspect, moon_speed) > 0
+    if is_applying_enhanced(moon_pos, planet_pos, aspect, jd_ut):
+        return False
+
+    diff = (
+        moon_pos.longitude - planet_pos.longitude - aspect.degrees + 180
+    ) % 360 - 180
+    relative_speed = moon_pos.speed - planet_pos.speed
+    return diff * relative_speed > 0
 
 
 def is_moon_applying_to_aspect(
     moon_pos: PlanetPosition,
     planet_pos: PlanetPosition,
     aspect: Aspect,
-    moon_speed: float,
+    jd_ut: float,
 ) -> bool:
-    """Check if the Moon is applying to an aspect using analytic motion."""
+    """Thin wrapper around :func:`is_applying_enhanced` for backward compatibility."""
 
-    return _moon_orb_motion(moon_pos, planet_pos, aspect, moon_speed) < 0
+    return is_applying_enhanced(moon_pos, planet_pos, aspect, jd_ut)
 
 
 def format_timing_description(days: float) -> str:
