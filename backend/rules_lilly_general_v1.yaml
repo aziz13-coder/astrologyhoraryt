@@ -35,6 +35,14 @@ rules:
     tier: special_topics
     description: Medical exceptions
     weight: 1.5
+  - id: S3
+    tier: special_topics
+    description: Mutual reception between L7 and Mercury
+    weight: 1.5
+  - id: S4
+    tier: special_topics
+    description: L7 imminent sign change
+    weight: 1.2
   - id: M1
     tier: moon
     description: Moon trine Sun
@@ -99,6 +107,10 @@ rules:
     tier: perfection
     description: Collection of light (negative)
     weight: -2.0
+  - id: P4
+    tier: perfection
+    description: Moon applying to Mercury
+    weight: 1.5
   - id: LC1
     tier: testimonies
     description: L10 fortunate
