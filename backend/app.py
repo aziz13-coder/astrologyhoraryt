@@ -47,6 +47,7 @@ from collections import defaultdict
 # UPDATED IMPORT: Use the new enhanced engine
 
 from horary_engine.engine import HoraryEngine, serialize_planet_with_solar
+from horary_engine.serialization import serialize_lunar_aspect
 from horary_engine.services.geolocation import LocationError
 from evaluate_chart import evaluate_chart
 from horary_engine.utils import token_to_string
@@ -1485,7 +1486,9 @@ def serialize_moon_debug(debug_data):
 
                 'degrees_left_in_sign': debug_data.get('void_result', {}).get('degrees_left_in_sign', 0),
 
-                'perfecting_aspects': debug_data.get('void_result', {}).get('perfecting_aspects', False)
+                'first_applying_aspect': serialize_lunar_aspect(
+                    debug_data.get('void_result', {}).get('first_applying_aspect')
+                ),
 
             },
 
