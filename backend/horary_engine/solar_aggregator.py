@@ -1,7 +1,7 @@
 """Aggregate testimonies with role importance scaling."""
 from __future__ import annotations
 
-from typing import Iterable, List, Tuple, Dict, Sequence
+from typing import Iterable, List, Tuple, Dict, Sequence, Any
 import re
 
 from .polarity_weights import (
@@ -13,6 +13,7 @@ from .polarity_weights import (
 )
 from .polarity import Polarity
 from .dsl import RoleImportance
+from .dsl_to_testimony import dispatch as dsl_dispatch
 
 
 def _coerce(testimonies: Iterable[TestimonyKey | str | RoleImportance]) -> Tuple[Sequence[TestimonyKey], Dict[str, float]]:
@@ -34,10 +35,26 @@ def _coerce(testimonies: Iterable[TestimonyKey | str | RoleImportance]) -> Tuple
 
 
 def aggregate(
-    testimonies: Iterable[TestimonyKey | str | RoleImportance],
+    testimonies: Iterable[TestimonyKey | str | RoleImportance | Any],
 ) -> Tuple[float, List[Dict[str, float | TestimonyKey | Polarity | str | bool]]]:
     """Aggregate testimony tokens into a score with role importance weighting."""
-    tokens, role_weights = _coerce(testimonies)
+
+    raw_items: List[TestimonyKey | str | RoleImportance] = []
+    extra_info: Dict[TestimonyKey, Dict[str, Any]] = {}
+    for raw in testimonies:
+        dispatched = dsl_dispatch(raw)
+        if dispatched:
+            for entry in dispatched:
+                token = entry.get("key")
+                if isinstance(token, TestimonyKey):
+                    raw_items.append(token)
+                    extra_info[token] = {
+                        k: v for k, v in entry.items() if k != "key"
+                    }
+        else:
+            raw_items.append(raw)
+
+    tokens, role_weights = _coerce(raw_items)
 
     total_yes = 0.0
     total_no = 0.0
@@ -77,19 +94,20 @@ def aggregate(
         delta_no = weight if (not context_only and polarity is Polarity.NEGATIVE) else 0.0
         total_yes += delta_yes
         total_no += delta_no
-        ledger.append(
-            {
-                "key": token,
-                "polarity": polarity,
-                "weight": weight,
-                "delta_yes": delta_yes,
-                "delta_no": delta_no,
-                "family": family,
-                "kind": kind,
-                "context": context_only,
-                "role_factor": role_factor,
-            }
-        )
+        entry = {
+            "key": token,
+            "polarity": polarity,
+            "weight": weight,
+            "delta_yes": delta_yes,
+            "delta_no": delta_no,
+            "family": family,
+            "kind": kind,
+            "context": context_only,
+            "role_factor": role_factor,
+        }
+        if token in extra_info:
+            entry.update(extra_info[token])
+        ledger.append(entry)
 
     total = total_yes - total_no
     return total, ledger
