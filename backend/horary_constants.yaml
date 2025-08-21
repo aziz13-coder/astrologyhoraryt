@@ -6,6 +6,12 @@ aggregator:
   # environment variable to "false" to fall back to the legacy aggregation
   # logic without editing this file.
   use_dsl: true
+  role_importance:
+    L1: 1.0   # Querent significator
+    LQ: 1.0   # Quesited significator
+    Moon: 0.7 # Baseline weight for the Moon
+    L10: 1.0  # Tenth house/examiner significator
+    L3: 1.0   # Third house/messenger significator
 
 timing:
   # Timing calculation parameters

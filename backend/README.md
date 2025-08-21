@@ -14,3 +14,23 @@ configuration files, set the `HORARY_USE_DSL` environment variable to
 `false`. The `evaluate_chart` function also accepts a `use_dsl` argument
 which callers can populate from a query parameter or HTTP header to
 switch modes dynamically.
+
+### Role importance
+
+The DSL aggregator supports configurable weighting for key roles via the
+`aggregator.role_importance` section of `horary_constants.yaml`. These
+factors scale the contribution of testimonies involving a role. Default
+weights:
+
+```yaml
+aggregator:
+  role_importance:
+    L1: 1.0   # Querent
+    LQ: 1.0   # Quesited
+    Moon: 0.7 # Moon baseline
+    L10: 1.0  # Tenth house/examiner
+    L3: 1.0   # Third house/messenger
+```
+
+Custom projects can adjust these values to tune the baseline importance
+of each role.
