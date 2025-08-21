@@ -47,7 +47,10 @@ from collections import defaultdict
 # UPDATED IMPORT: Use the new enhanced engine
 
 from horary_engine.engine import HoraryEngine, serialize_planet_with_solar
-from horary_engine.serialization import serialize_lunar_aspect
+from horary_engine.serialization import (
+    serialize_lunar_aspect,
+    deserialize_chart_for_evaluation,
+)
 from horary_engine.services.geolocation import LocationError
 from evaluate_chart import evaluate_chart
 from horary_engine.utils import token_to_string
@@ -1090,14 +1093,19 @@ def calculate_chart():
 
         # Attach structured evaluation results
         try:
-            evaluation = evaluate_chart(result.get('chart_data', {}), use_dsl=False)
-            ledger = evaluation.get('ledger', [])
-            for entry in ledger:
-                entry['key'] = token_to_string(entry.get('key'))
-                if 'polarity' in entry and hasattr(entry['polarity'], 'name'):
-                    entry['polarity'] = entry['polarity'].name
-            result['ledger'] = ledger
-            result['rationale'] = evaluation.get('rationale', [])
+            chart_data = result.get('chart_data')
+            if chart_data:
+                chart_obj = deserialize_chart_for_evaluation(chart_data)
+                evaluation = evaluate_chart(chart_obj, use_dsl=False)
+                ledger = evaluation.get('ledger', [])
+                for entry in ledger:
+                    entry['key'] = token_to_string(entry.get('key'))
+                    if 'polarity' in entry and hasattr(entry['polarity'], 'name'):
+                        entry['polarity'] = entry['polarity'].name
+                result['ledger'] = ledger
+                result['rationale'] = evaluation.get('rationale', [])
+            else:
+                result['rationale'] = result.get('reasoning', [])
         except Exception as eval_error:
             logger.warning(f"evaluate_chart failed: {eval_error}")
             result['rationale'] = result.get('reasoning', [])

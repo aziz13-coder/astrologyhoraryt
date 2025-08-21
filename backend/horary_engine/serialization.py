@@ -1,6 +1,9 @@
 """Serialization helpers for the horary engine."""
 
 from typing import Any, Dict, Optional
+import datetime
+
+import swisseph as swe
 
 try:
     from ..models import (
@@ -11,6 +14,8 @@ try:
         SolarAnalysis,
         SolarCondition,
         Aspect as AspectType,
+        Sign,
+        AspectInfo,
     )
 except ImportError:  # pragma: no cover - fallback when executed as script
     from models import (
@@ -21,6 +26,8 @@ except ImportError:  # pragma: no cover - fallback when executed as script
         SolarAnalysis,
         SolarCondition,
         Aspect as AspectType,
+        Sign,
+        AspectInfo,
     )
 
 try:
@@ -190,6 +197,121 @@ def serialize_chart_for_frontend(
         result["moon_next_aspect"] = serialize_lunar_aspect(chart.moon_next_aspect)
 
     return result
+
+
+def deserialize_chart_for_evaluation(data: Dict[str, Any]) -> HoraryChart:
+    """Deserialize serialized chart data into a :class:`HoraryChart`.
+
+    The input ``data`` is expected to follow the structure produced by
+    :func:`serialize_chart_for_frontend`. Only the fields required by the
+    evaluation pipeline are reconstructed.
+    """
+
+    tz_info = data.get("timezone_info", {})
+    dt_local = datetime.datetime.fromisoformat(tz_info.get("local_time"))
+    dt_utc = datetime.datetime.fromisoformat(tz_info.get("utc_time"))
+    lat = tz_info.get("coordinates", {}).get("latitude", 0.0)
+    lon = tz_info.get("coordinates", {}).get("longitude", 0.0)
+
+    planets: Dict[Planet, PlanetPosition] = {}
+    solar_analyses: Dict[Planet, SolarAnalysis] = {}
+    for name, p in data.get("planets", {}).items():
+        planet_enum = Planet[name.upper()]
+        sign_enum = Sign[p["sign"].upper()]
+        planets[planet_enum] = PlanetPosition(
+            planet=planet_enum,
+            longitude=p["longitude"],
+            latitude=p["latitude"],
+            house=p["house"],
+            sign=sign_enum,
+            dignity_score=p.get("dignity_score", 0),
+            retrograde=p.get("retrograde", False),
+            speed=p.get("speed", 0.0),
+            dignities=p.get("dignities", []),
+        )
+        sc = p.get("solar_condition")
+        if sc:
+            cond_name = sc["condition"].replace(" ", "_").upper()
+            if cond_name == "FREE_OF_SUN":
+                cond_name = "FREE"
+            elif cond_name == "UNDER_THE_BEAMS":
+                cond_name = "UNDER_BEAMS"
+            solar_analyses[planet_enum] = SolarAnalysis(
+                planet=planet_enum,
+                distance_from_sun=sc["distance_from_sun"],
+                condition=SolarCondition[cond_name],
+                exact_cazimi=sc.get("exact_cazimi", False),
+                traditional_exception=sc.get("traditional_exception", False),
+            )
+
+    aspects = []
+    for a in data.get("aspects", []):
+        aspects.append(
+            AspectInfo(
+                planet1=Planet[a["planet1"].upper()],
+                planet2=Planet[a["planet2"].upper()],
+                aspect=AspectType[a["aspect"].upper()],
+                orb=a["orb"],
+                applying=a.get("applying", False),
+                exact_time=datetime.datetime.fromisoformat(a["exact_time"])
+                if a.get("exact_time")
+                else None,
+                degrees_to_exact=a.get("degrees_to_exact", 0.0),
+            )
+        )
+
+    house_rulers = {
+        int(h): Planet[r.upper()] for h, r in data.get("house_rulers", {}).items()
+    }
+
+    moon_last_aspect = None
+    if ml := data.get("moon_last_aspect"):
+        moon_last_aspect = LunarAspect(
+            planet=Planet[ml["planet"].upper()],
+            aspect=AspectType[ml["aspect"].upper()],
+            orb=ml["orb"],
+            degrees_difference=ml["degrees_difference"],
+            perfection_eta_days=ml["perfection_eta_days"],
+            perfection_eta_description=ml["perfection_eta_description"],
+            applying=ml.get("applying", True),
+        )
+
+    moon_next_aspect = None
+    if mn := data.get("moon_next_aspect"):
+        moon_next_aspect = LunarAspect(
+            planet=Planet[mn["planet"].upper()],
+            aspect=AspectType[mn["aspect"].upper()],
+            orb=mn["orb"],
+            degrees_difference=mn["degrees_difference"],
+            perfection_eta_days=mn["perfection_eta_days"],
+            perfection_eta_description=mn["perfection_eta_description"],
+            applying=mn.get("applying", True),
+        )
+
+    jd = swe.julday(
+        dt_utc.year,
+        dt_utc.month,
+        dt_utc.day,
+        dt_utc.hour + dt_utc.minute / 60.0 + dt_utc.second / 3600.0,
+    )
+
+    return HoraryChart(
+        date_time=dt_local,
+        date_time_utc=dt_utc,
+        timezone_info=tz_info.get("timezone", "UTC"),
+        location=(lat, lon),
+        location_name=tz_info.get("location_name", ""),
+        planets=planets,
+        aspects=aspects,
+        houses=data.get("houses", []),
+        house_rulers=house_rulers,
+        ascendant=data.get("ascendant", 0.0),
+        midheaven=data.get("midheaven", 0.0),
+        solar_analyses=solar_analyses or None,
+        julian_day=jd,
+        moon_last_aspect=moon_last_aspect,
+        moon_next_aspect=moon_next_aspect,
+    )
 
 
 # ---------------------------------------------------------------------------
