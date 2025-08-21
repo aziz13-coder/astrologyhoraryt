@@ -15,6 +15,12 @@ except ImportError:  # pragma: no cover - fallback when executed as script
 from .calculation.helpers import days_to_sign_exit
 
 
+def _signed_longitude_delta(lon1: float, lon2: float) -> float:
+    """Return signed longitudinal difference lon1-lon2 normalised to [-180, 180]."""
+
+    return (lon1 - lon2 + 180) % 360 - 180
+
+
 def calculate_moon_last_aspect(
     planets: Dict[Planet, PlanetPosition],
     jd_ut: float,
@@ -32,10 +38,8 @@ def calculate_moon_last_aspect(
         if planet == Planet.MOON:
             continue
 
-        # Calculate current separation
-        separation = abs(moon_pos.longitude - planet_pos.longitude)
-        if separation > 180:
-            separation = 360 - separation
+        # Calculate current separation using signed delta
+        separation = abs(_signed_longitude_delta(moon_pos.longitude, planet_pos.longitude))
 
         # Check each aspect type
         for aspect_type in Aspect:
@@ -97,10 +101,8 @@ def calculate_moon_next_aspect(
         if planet == Planet.MOON:
             continue
 
-        # Calculate current separation
-        separation = abs(moon_pos.longitude - planet_pos.longitude)
-        if separation > 180:
-            separation = 360 - separation
+        # Calculate current separation using signed delta
+        separation = abs(_signed_longitude_delta(moon_pos.longitude, planet_pos.longitude))
 
         # Check each aspect type
         for aspect_type in Aspect:
@@ -218,10 +220,8 @@ def calculate_enhanced_aspects(
             pos1 = planets[planet1]
             pos2 = planets[planet2]
 
-            # Calculate angular separation
-            angle_diff = abs(pos1.longitude - pos2.longitude)
-            if angle_diff > 180:
-                angle_diff = 360 - angle_diff
+            # Calculate angular separation using signed delta
+            angle_diff = abs(_signed_longitude_delta(pos1.longitude, pos2.longitude))
 
             # Check each traditional aspect
             for aspect_type in Aspect:
@@ -274,11 +274,14 @@ def calculate_moiety_based_orb(
     if not hasattr(config.orbs, "moieties"):
         return 0  # Fallback to legacy system
 
-    # Get planetary moieties
-    moiety1 = getattr(config.orbs.moieties, planet1.value, 8.0)  # Default 8.0 if not found
-    moiety2 = getattr(config.orbs.moieties, planet2.value, 8.0)
+    # Get planetary full orb values and convert to moieties (half-orbs)
+    full_orb1 = getattr(config.orbs.moieties, planet1.value, 0.0)
+    full_orb2 = getattr(config.orbs.moieties, planet2.value, 0.0)
 
-    # Combined moiety orb
+    moiety1 = full_orb1 / 2.0
+    moiety2 = full_orb2 / 2.0
+
+    # Combined moiety orb (sum of half-orbs)
     combined_moiety = moiety1 + moiety2
 
     # Traditional aspect-specific adjustments
@@ -297,17 +300,30 @@ def calculate_moiety_based_orb(
 def is_applying_enhanced(
     pos1: PlanetPosition, pos2: PlanetPosition, aspect: Aspect, jd_ut: float
 ) -> bool:
-    """Determine if planets are applying to a given aspect analytically."""
+    """Determine if planets are applying to a given aspect analytically.
 
-    # Signed difference from exact aspect in range [-180, 180)
-    diff = (pos1.longitude - pos2.longitude - aspect.degrees + 180) % 360 - 180
+    The calculation compares the faster planet to the slower one so that
+    applying/separating determination is invariant to argument order and
+    properly handles retrograde motion.
+    """
+
+    # Identify faster and slower bodies by absolute speed
+    if abs(pos1.speed) >= abs(pos2.speed):
+        fast, slow = pos1, pos2
+    else:
+        fast, slow = pos2, pos1
+
+    # Signed difference from exact aspect from fast → slow
+    diff = _signed_longitude_delta(fast.longitude, slow.longitude) - aspect.degrees
+    # Normalise to [-180, 180]
+    diff = (diff + 180) % 360 - 180
     current_orb = abs(diff)
 
     # Check sign exit conditions (preserve traditional horary rules)
     if not _will_perfect_before_sign_exit(pos1, pos2, aspect, current_orb):
         return False
 
-    relative_speed = pos1.speed - pos2.speed
+    relative_speed = fast.speed - slow.speed
     return diff * relative_speed < 0
 
 
@@ -315,9 +331,7 @@ def _calculate_orb_to_aspect(pos1: PlanetPosition, pos2: PlanetPosition, aspect:
     """Calculate current orb (degrees) to exact aspect"""
     
     # Current angular separation
-    separation = abs(pos1.longitude - pos2.longitude)
-    if separation > 180:
-        separation = 360 - separation
+    separation = abs(_signed_longitude_delta(pos1.longitude, pos2.longitude))
     
     # Distance to exact aspect
     orb_to_exact = abs(separation - aspect.degrees)
@@ -337,10 +351,8 @@ def _calculate_orb_to_aspect_at_time(pos1: PlanetPosition, pos2: PlanetPosition,
     future_pos1_lon = (pos1.longitude + pos1.speed * time_days) % 360
     future_pos2_lon = (pos2.longitude + pos2.speed * time_days) % 360
     
-    # Future angular separation  
-    future_separation = abs(future_pos1_lon - future_pos2_lon)
-    if future_separation > 180:
-        future_separation = 360 - future_separation
+    # Future angular separation
+    future_separation = abs(_signed_longitude_delta(future_pos1_lon, future_pos2_lon))
     
     # Future distance to exact aspect
     future_orb = abs(future_separation - aspect.degrees)
@@ -383,9 +395,7 @@ def calculate_enhanced_degrees_to_exact(
     """Enhanced degrees and time calculation"""
 
     # Current separation
-    separation = abs(pos1.longitude - pos2.longitude)
-    if separation > 180:
-        separation = 360 - separation
+    separation = abs(_signed_longitude_delta(pos1.longitude, pos2.longitude))
 
     # Orb from exact
     orb_from_exact = abs(separation - aspect.degrees)
