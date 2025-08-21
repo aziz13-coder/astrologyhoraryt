@@ -44,15 +44,17 @@ orbs:
   trine: 8.0
   opposition: 8.0
   
-  # Traditional planetary moieties (half-orbs) - Lilly/Bonatti values
+  # Traditional planetary orbs (degrees). Moiety-based calculations use half of these.
+  # Default moiety values:
+  #   Sun 15°, Moon 12°, Saturn/Jupiter 9°, Mars 7.5°, Venus 7.5°, Mercury 7°
   moieties:
-    Sun: 10.0      # Solar moiety (reduced for precision)
-    Moon: 8.0      # Lunar moiety (reduced from traditional 12.5)
-    Mercury: 4.0   # Mercurial moiety
-    Venus: 5.0     # Venusian moiety
-    Mars: 4.5      # Martial moiety
-    Jupiter: 6.0   # Jovial moiety
-    Saturn: 6.0    # Saturnian moiety
+    Sun: 15.0
+    Moon: 12.0
+    Mercury: 7.0
+    Venus: 7.5
+    Mars: 7.5
+    Jupiter: 9.0
+    Saturn: 9.0
   
   # Luminary orb bonuses
   sun_orb_bonus: 1.0
