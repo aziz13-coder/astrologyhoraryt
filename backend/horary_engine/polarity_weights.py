@@ -23,6 +23,14 @@ class TestimonyKey(Enum):
     MOON_APPLYING_OPPOSITION_L1 = "moon_applying_opposition_l1"
     MOON_APPLYING_OPPOSITION_L7 = "moon_applying_opposition_l7"
     L10_FORTUNATE = "l10_fortunate"
+    L7_FORTUNATE = "l7_fortunate"
+    L7_MALIFIC_DEBILITY = "l7_malific_debility"
+    L2_FORTUNATE = "l2_fortunate"
+    L2_MALIFIC_DEBILITY = "l2_malific_debility"
+    L8_FORTUNATE = "l8_fortunate"
+    L8_MALIFIC_DEBILITY = "l8_malific_debility"
+    L5_FORTUNATE = "l5_fortunate"
+    L5_MALIFIC_DEBILITY = "l5_malific_debility"
     PERFECTION_DIRECT = "perfection_direct"
     PERFECTION_TRANSLATION_OF_LIGHT = "perfection_translation_of_light"
     PERFECTION_COLLECTION_OF_LIGHT = "perfection_collection_of_light"
@@ -49,6 +57,14 @@ POLARITY_TABLE: dict[TestimonyKey, Polarity] = {
     TestimonyKey.MOON_APPLYING_OPPOSITION_L7: Polarity.NEGATIVE,
     # Fortunate outcome promised by L10
     TestimonyKey.L10_FORTUNATE: Polarity.POSITIVE,
+    TestimonyKey.L7_FORTUNATE: Polarity.POSITIVE,
+    TestimonyKey.L7_MALIFIC_DEBILITY: Polarity.NEGATIVE,
+    TestimonyKey.L2_FORTUNATE: Polarity.POSITIVE,
+    TestimonyKey.L2_MALIFIC_DEBILITY: Polarity.NEGATIVE,
+    TestimonyKey.L8_FORTUNATE: Polarity.POSITIVE,
+    TestimonyKey.L8_MALIFIC_DEBILITY: Polarity.NEGATIVE,
+    TestimonyKey.L5_FORTUNATE: Polarity.POSITIVE,
+    TestimonyKey.L5_MALIFIC_DEBILITY: Polarity.NEGATIVE,
     # Perfection testimonies are positive by default
     TestimonyKey.PERFECTION_DIRECT: Polarity.POSITIVE,
     TestimonyKey.PERFECTION_TRANSLATION_OF_LIGHT: Polarity.POSITIVE,
@@ -68,6 +84,14 @@ WEIGHT_TABLE: dict[TestimonyKey, float] = {
     TestimonyKey.MOON_APPLYING_OPPOSITION_L1: 1.0,
     TestimonyKey.MOON_APPLYING_OPPOSITION_L7: 1.0,
     TestimonyKey.L10_FORTUNATE: 1.0,
+    TestimonyKey.L7_FORTUNATE: 1.0,
+    TestimonyKey.L7_MALIFIC_DEBILITY: 1.0,
+    TestimonyKey.L2_FORTUNATE: 1.0,
+    TestimonyKey.L2_MALIFIC_DEBILITY: 1.0,
+    TestimonyKey.L8_FORTUNATE: 1.0,
+    TestimonyKey.L8_MALIFIC_DEBILITY: 1.0,
+    TestimonyKey.L5_FORTUNATE: 1.0,
+    TestimonyKey.L5_MALIFIC_DEBILITY: 1.0,
     TestimonyKey.PERFECTION_DIRECT: 1.0,
     TestimonyKey.PERFECTION_TRANSLATION_OF_LIGHT: 1.0,
     TestimonyKey.PERFECTION_COLLECTION_OF_LIGHT: 1.0,
@@ -82,11 +106,27 @@ FAMILY_TABLE: dict[TestimonyKey, str] = {
     TestimonyKey.PERFECTION_DIRECT: "perfection",
     TestimonyKey.PERFECTION_TRANSLATION_OF_LIGHT: "perfection",
     TestimonyKey.PERFECTION_COLLECTION_OF_LIGHT: "perfection",
+    TestimonyKey.L7_FORTUNATE: "l7_condition",
+    TestimonyKey.L7_MALIFIC_DEBILITY: "l7_condition",
+    TestimonyKey.L2_FORTUNATE: "l2_condition",
+    TestimonyKey.L2_MALIFIC_DEBILITY: "l2_condition",
+    TestimonyKey.L8_FORTUNATE: "l8_condition",
+    TestimonyKey.L8_MALIFIC_DEBILITY: "l8_condition",
+    TestimonyKey.L5_FORTUNATE: "l5_condition",
+    TestimonyKey.L5_MALIFIC_DEBILITY: "l5_condition",
 }
 
 KIND_TABLE: dict[TestimonyKey, str] = {
     TestimonyKey.PERFECTION_DIRECT: "direct",
     TestimonyKey.PERFECTION_TRANSLATION_OF_LIGHT: "tol",
     TestimonyKey.PERFECTION_COLLECTION_OF_LIGHT: "col",
+    TestimonyKey.L7_FORTUNATE: "l7",
+    TestimonyKey.L7_MALIFIC_DEBILITY: "l7",
+    TestimonyKey.L2_FORTUNATE: "l2",
+    TestimonyKey.L2_MALIFIC_DEBILITY: "l2",
+    TestimonyKey.L8_FORTUNATE: "l8",
+    TestimonyKey.L8_MALIFIC_DEBILITY: "l8",
+    TestimonyKey.L5_FORTUNATE: "l5",
+    TestimonyKey.L5_MALIFIC_DEBILITY: "l5",
 }
 
