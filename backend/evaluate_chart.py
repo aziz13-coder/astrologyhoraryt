@@ -99,7 +99,10 @@ def evaluate_chart(
         serialize_primitive(t) for t in testimonies if is_dataclass(t)
     ]
 
-    score, ledger = aggregator_fn(testimonies, contract)
+    if use_dsl:
+        score, ledger = aggregator_fn(testimonies, contract)
+    else:
+        score, ledger = aggregator_fn(testimonies)
     # Surface ledger details for downstream inspection and debugging
     logger.info(
         "Contribution ledger: %s",
