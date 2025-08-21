@@ -59,3 +59,71 @@ rules:
     tier: thresholds
     description: Speed threshold
     weight: -1.0
+  - id: M3
+    tier: moon
+    description: Moon square Sun
+    weight: -1.0
+  - id: M4
+    tier: moon
+    description: Moon sextile Sun
+    weight: 1.0
+  - id: M5
+    tier: moon
+    description: Moon sextile L1
+    weight: 1.0
+  - id: M6
+    tier: moon
+    description: Moon sextile L7
+    weight: 1.0
+  - id: M7
+    tier: moon
+    description: Moon opposition Sun
+    weight: -1.0
+  - id: M8
+    tier: moon
+    description: Moon opposition L1
+    weight: -1.0
+  - id: M9
+    tier: moon
+    description: Moon opposition L7
+    weight: -1.0
+  - id: P3
+    tier: perfection
+    description: Collection of light
+    weight: 2.0
+  - id: LC1
+    tier: testimonies
+    description: L10 fortunate
+    weight: 1.0
+  - id: LC2
+    tier: testimonies
+    description: L7 fortunate
+    weight: 1.0
+  - id: LC3
+    tier: testimonies
+    description: L7 malefic debility
+    weight: -1.0
+  - id: LC4
+    tier: testimonies
+    description: L2 fortunate
+    weight: 1.0
+  - id: LC5
+    tier: testimonies
+    description: L2 malefic debility
+    weight: -1.0
+  - id: LC6
+    tier: testimonies
+    description: L8 fortunate
+    weight: 1.0
+  - id: LC7
+    tier: testimonies
+    description: L8 malefic debility
+    weight: -1.0
+  - id: LC8
+    tier: testimonies
+    description: L5 fortunate
+    weight: 1.0
+  - id: LC9
+    tier: testimonies
+    description: L5 malefic debility
+    weight: -1.0
