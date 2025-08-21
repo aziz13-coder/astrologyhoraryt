@@ -574,10 +574,10 @@ class EnhancedTraditionalAstrologicalCalculator:
         # Calculate elongation
         elongation = calculate_elongation(planet_pos.longitude, sun_pos.longitude)
         
-        # Get configured orbs
-        cazimi_orb = cfg().orbs.cazimi_orb_arcmin / 60.0  # Convert arcminutes to degrees
-        combustion_orb = cfg().orbs.combustion_orb
-        under_beams_orb = cfg().orbs.under_beams_orb
+        # Use fixed traditional boundaries
+        cazimi_orb = 17 / 60.0  # 0°17′
+        combustion_orb = 8.5   # 8°30′
+        under_beams_orb = 17.0 # 17°
         
         # Enhanced visibility check for Venus and Mercury
         traditional_exception = False
@@ -598,38 +598,22 @@ class EnhancedTraditionalAstrologicalCalculator:
             )
         
         elif elongation <= combustion_orb:
-            # Combustion - but check for traditional exceptions
-            if traditional_exception:
-                return SolarAnalysis(
-                    planet=planet,
-                    distance_from_sun=elongation,
-                    condition=SolarCondition.FREE,  # Exception negates combustion
-                    traditional_exception=True
-                )
-            else:
-                return SolarAnalysis(
-                    planet=planet,
-                    distance_from_sun=elongation,
-                    condition=SolarCondition.COMBUSTION,
-                    traditional_exception=False
-                )
-        
+            # Combustion - still track traditional visibility exceptions
+            return SolarAnalysis(
+                planet=planet,
+                distance_from_sun=elongation,
+                condition=SolarCondition.COMBUSTION,
+                traditional_exception=traditional_exception
+            )
+
         elif elongation <= under_beams_orb:
-            # Under the Beams - with exception handling
-            if traditional_exception:
-                return SolarAnalysis(
-                    planet=planet,
-                    distance_from_sun=elongation,
-                    condition=SolarCondition.FREE,  # Exception reduces to free
-                    traditional_exception=True
-                )
-            else:
-                return SolarAnalysis(
-                    planet=planet,
-                    distance_from_sun=elongation,
-                    condition=SolarCondition.UNDER_BEAMS,
-                    traditional_exception=False
-                )
+            # Under the Beams - report regardless of configurability
+            return SolarAnalysis(
+                planet=planet,
+                distance_from_sun=elongation,
+                condition=SolarCondition.UNDER_BEAMS,
+                traditional_exception=traditional_exception
+            )
         
         # Free of solar interference
         return SolarAnalysis(
@@ -866,16 +850,19 @@ class EnhancedTraditionalAstrologicalCalculator:
         # Solar conditions
         if solar_analysis:
             condition = solar_analysis.condition
-            
+
             if condition == SolarCondition.CAZIMI:
+                dignities.append("cazimi")
                 if solar_analysis.exact_cazimi:
                     score += config.confidence.solar.exact_cazimi_bonus
                 else:
                     score += config.confidence.solar.cazimi_bonus
             elif condition == SolarCondition.COMBUSTION:
+                dignities.append("combust")
                 if not solar_analysis.traditional_exception:
                     score -= config.confidence.solar.combustion_penalty
             elif condition == SolarCondition.UNDER_BEAMS:
+                dignities.append("under_beams")
                 if not solar_analysis.traditional_exception:
                     score -= config.confidence.solar.under_beams_penalty
         
