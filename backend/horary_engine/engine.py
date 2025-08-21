@@ -3679,6 +3679,9 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                         "reason": prohibition_check["reason"],
                         "t_perfect_days": prohibition_check.get("t_event"),
                         "aspect": aspect_type,
+                        "mediating_aspect": prohibition_check.get("aspect"),
+                        "aspect_quality": prohibition_check.get("quality"),
+                        "reception": prohibition_check.get("reception"),
                         **extra,
                         "tags": [{"family": "perfection", "kind": kind}],
                     }
@@ -3856,6 +3859,11 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                     conf_key = (
                         "translation_of_light" if kind == "translation" else "collection_of_light"
                     )
+                    extra = (
+                        {"translator": prohibition_check.get("translator")}
+                        if kind == "translation"
+                        else {"collector": prohibition_check.get("collector")}
+                    )
                     return {
                         "perfects": True,
                         "type": kind,
@@ -3866,6 +3874,10 @@ class EnhancedTraditionalHoraryJudgmentEngine:
                         "planet_in_house": planet,
                         "house_ruler": ruler,
                         "aspect": aspect_type,
+                        "mediating_aspect": prohibition_check.get("aspect"),
+                        "aspect_quality": prohibition_check.get("quality"),
+                        "reception": prohibition_check.get("reception"),
+                        **extra,
                         "tags": [{"family": "perfection", "kind": kind}],
                     }
 

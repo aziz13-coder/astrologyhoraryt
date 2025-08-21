@@ -3,6 +3,7 @@ import datetime
 from pathlib import Path
 import sys
 
+import pytest
 import swisseph as swe
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -25,7 +26,10 @@ from models import (
 
 
 def _load_lottery_chart() -> HoraryChart:
-    with open(ROOT / "will I win the lottery.json") as f:
+    data_file = ROOT / "will I win the lottery.json"
+    if not data_file.exists():
+        pytest.skip("lottery chart file missing")
+    with open(data_file) as f:
         data = json.load(f)["chart_data"]
 
     tz_info = data["timezone_info"]
