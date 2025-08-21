@@ -17,6 +17,8 @@ from horary_config import cfg
 
 def _load_lottery_chart() -> HoraryChart:
     data_path = ROOT / "will I win the lottery.json"
+    if not data_path.exists():
+        pytest.skip("lottery chart file missing")
     with open(data_path, "r") as f:
         data = json.load(f)
 
@@ -91,3 +93,80 @@ def test_venus_saturn_prohibits_future_sextile():
     assert result["prohibitor"] == Planet.SATURN
     assert result["significator"] == Planet.VENUS
     assert result["t_prohibition"] == pytest.approx(5.57, rel=0.05)
+
+
+def test_translation_square_with_reception_positive_phrase():
+    now = datetime.datetime.utcnow()
+    planets = {
+        Planet.VENUS: PlanetPosition(
+            planet=Planet.VENUS,
+            longitude=0.0,
+            latitude=0.0,
+            house=1,
+            sign=Sign.ARIES,
+            dignity_score=0,
+            speed=1.0,
+        ),
+        Planet.JUPITER: PlanetPosition(
+            planet=Planet.JUPITER,
+            longitude=10.0,
+            latitude=0.0,
+            house=7,
+            sign=Sign.SCORPIO,
+            dignity_score=0,
+            speed=1.0,
+        ),
+        Planet.MARS: PlanetPosition(
+            planet=Planet.MARS,
+            longitude=20.0,
+            latitude=0.0,
+            house=5,
+            sign=Sign.CAPRICORN,
+            dignity_score=0,
+            speed=2.0,
+        ),
+        Planet.SUN: PlanetPosition(
+            planet=Planet.SUN,
+            longitude=50.0,
+            latitude=0.0,
+            house=10,
+            sign=Sign.LEO,
+            dignity_score=0,
+            speed=1.0,
+        ),
+    }
+    chart = HoraryChart(
+        date_time=now,
+        date_time_utc=now,
+        timezone_info="UTC",
+        location=(0.0, 0.0),
+        location_name="Test",
+        planets=planets,
+        aspects=[],
+        houses=[0.0] * 12,
+        house_rulers={},
+        ascendant=0.0,
+        midheaven=0.0,
+        julian_day=0.0,
+    )
+
+    cfg().perfection.require_in_sign = False
+
+    def mock_calc(pos_a, pos_b, aspect, jd, max_days):
+        if aspect == Aspect.SQUARE and pos_b.planet == Planet.MARS:
+            return 2.0
+        return None
+
+    result = check_future_prohibitions(
+        chart, Planet.VENUS, Planet.JUPITER, 10.0, mock_calc
+    )
+
+    assert result["type"] == "translation"
+    assert result["translator"] == Planet.MARS
+    assert result["aspect"] == Aspect.SQUARE
+    assert result["quality"] == "with difficulty"
+    assert result["reception"] is True
+    assert (
+        result["reason"]
+        == "Perfection by translation (square): positive with difficulty (softened by reception)"
+    )

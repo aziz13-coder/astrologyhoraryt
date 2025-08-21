@@ -4,6 +4,7 @@ from typing import Callable, Dict, Any, List
 
 from horary_config import cfg
 from .calculation.helpers import days_to_sign_exit
+from .reception import TraditionalReceptionCalculator
 try:
     from ..models import Planet, Aspect, HoraryChart
 except ImportError:  # pragma: no cover - fallback when executed as script
@@ -55,6 +56,7 @@ def check_future_prohibitions(
 
     pos1 = chart.planets[sig1]
     pos2 = chart.planets[sig2]
+    reception_calc = TraditionalReceptionCalculator()
 
     def _valid(t: float, p_a, p_b) -> bool:
         if t is None or t <= 0 or t >= days_ahead:
@@ -82,21 +84,55 @@ def check_future_prohibitions(
                 # Both significators aspect the planet before main perfection
                 if p_pos.speed > max(pos1.speed, pos2.speed):
                     t_event = max(t1, t2)
+                    quality = (
+                        "easier"
+                        if aspect in (Aspect.CONJUNCTION, Aspect.TRINE, Aspect.SEXTILE)
+                        else "with difficulty"
+                    )
+                    rec1 = reception_calc.calculate_comprehensive_reception(chart, planet, sig1)
+                    rec2 = reception_calc.calculate_comprehensive_reception(chart, planet, sig2)
+                    has_reception = rec1["type"] != "none" or rec2["type"] != "none"
+                    reason = (
+                        f"Perfection by translation ({aspect.display_name.lower()}): positive "
+                        + (f"({quality})" if quality == "easier" else f"{quality}")
+                    )
+                    if has_reception and quality == "with difficulty":
+                        reason += " (softened by reception)"
                     return {
                         "prohibited": False,
                         "type": "translation",
                         "translator": planet,
                         "t_event": t_event,
-                        "reason": f"{planet.value} translates light between {sig1.value} and {sig2.value}",
+                        "aspect": aspect,
+                        "quality": quality,
+                        "reception": has_reception,
+                        "reason": reason,
                     }
                 if p_pos.speed < min(pos1.speed, pos2.speed):
                     t_event = max(t1, t2)
+                    quality = (
+                        "easier"
+                        if aspect in (Aspect.CONJUNCTION, Aspect.TRINE, Aspect.SEXTILE)
+                        else "with difficulty"
+                    )
+                    rec1 = reception_calc.calculate_comprehensive_reception(chart, planet, sig1)
+                    rec2 = reception_calc.calculate_comprehensive_reception(chart, planet, sig2)
+                    has_reception = rec1["type"] != "none" or rec2["type"] != "none"
+                    reason = (
+                        f"Perfection by collection ({aspect.display_name.lower()}): positive "
+                        + (f"({quality})" if quality == "easier" else f"{quality}")
+                    )
+                    if has_reception and quality == "with difficulty":
+                        reason += " (softened by reception)"
                     return {
                         "prohibited": False,
                         "type": "collection",
                         "collector": planet,
                         "t_event": t_event,
-                        "reason": f"{planet.value} collects light from {sig1.value} and {sig2.value}",
+                        "aspect": aspect,
+                        "quality": quality,
+                        "reception": has_reception,
+                        "reason": reason,
                     }
                 # Neither translation nor collection: first contact prohibits
                 if t1 <= t2:

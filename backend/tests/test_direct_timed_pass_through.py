@@ -3,7 +3,7 @@ import datetime
 import pytest
 
 from backend.horary_engine.engine import EnhancedTraditionalHoraryJudgmentEngine
-from models import HoraryChart, PlanetPosition, Planet, Sign
+from models import HoraryChart, PlanetPosition, Planet, Sign, Aspect
 
 
 def _build_simple_chart():
@@ -89,6 +89,32 @@ def test_passes_translation_details(monkeypatch):
     assert res["perfects"] is True
     assert res["type"] == "translation"
     assert res["translator"] == Planet.MERCURY
+
+
+def test_passes_translation_aspect_quality(monkeypatch):
+    chart = _build_simple_chart()
+    engine = EnhancedTraditionalHoraryJudgmentEngine()
+    monkeypatch.setattr(
+        engine, "_calculate_future_aspect_time", lambda *args, **kwargs: 5
+    )
+    monkeypatch.setattr(
+        engine,
+        "_check_future_prohibitions",
+        lambda *args, **kwargs: {
+            "prohibited": False,
+            "type": "translation",
+            "translator": Planet.MERCURY,
+            "t_event": 2,
+            "aspect": Aspect.SQUARE,
+            "quality": "with difficulty",
+            "reception": True,
+            "reason": "Perfection by translation (square): positive with difficulty",
+        },
+    )
+    res = engine._check_direct_timed_perfection(chart, Planet.VENUS, Planet.JUPITER, 10)
+    assert res["mediating_aspect"] == Aspect.SQUARE
+    assert res["aspect_quality"] == "with difficulty"
+    assert res["reception"] is True
 
 
 def test_passes_collection_details(monkeypatch):
