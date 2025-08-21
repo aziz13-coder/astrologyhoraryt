@@ -349,10 +349,15 @@ except ImportError:  # pragma: no cover - fallback when executed as script
     )
     from question_analyzer import TraditionalHoraryQuestionAnalyzer
 try:
-    from ..taxonomy import Category, resolve_category, resolve as resolve_significators
+    from ..taxonomy import (
+        Category,
+        resolve_category,
+        resolve as resolve_significators,
+        get_defaults,
+    )
     from ..category_rules import get_category_rules
 except ImportError:  # pragma: no cover - fallback when package context is missing
-    from taxonomy import Category, resolve_category, resolve as resolve_significators
+    from taxonomy import Category, resolve_category, resolve as resolve_significators, get_defaults
     from category_rules import get_category_rules
 from .reception import TraditionalReceptionCalculator
 from .aspects import (
@@ -1772,12 +1777,17 @@ class EnhancedTraditionalHoraryJudgmentEngine:
         if perfection.get("perfects"):
             moon_next_aspect_result["decisive"] = False
 
-        sun_to_10th = self._check_sun_applying_to_10th_ruler(chart)
-        if sun_to_10th:
-            reasoning.append("Sun applying to 10th ruler - result/recognition revealed soon")
-            confidence = min(100, confidence + 2)
-            if sun_to_10th.get("combust"):
-                reasoning.append("Combustion on 10th ruler mitigated")
+        sun_to_10th = None
+        defaults = get_defaults(question_type) if question_type else {}
+        if 10 in defaults.get("houses", []):
+            sun_to_10th = self._check_sun_applying_to_10th_ruler(chart)
+            if sun_to_10th:
+                reasoning.append(
+                    "Sun applying to 10th ruler - result/recognition revealed soon"
+                )
+                confidence = min(100, confidence + 2)
+                if sun_to_10th.get("combust"):
+                    reasoning.append("Combustion on 10th ruler mitigated")
 
         if perfection["perfects"]:
             result = "YES" if perfection["favorable"] else "NO"
@@ -2457,10 +2467,9 @@ class EnhancedTraditionalHoraryJudgmentEngine:
 
         threshold = getattr(penalties, "dignity_threshold", -5)
 
-        # Only apply debilitated ruler penalties for houses explicitly listed
-        for house in [2, 11]:
-            if house not in category_rules.get("outcome_houses", []):
-                continue
+        # Only apply debilitated ruler penalties for configured outcome houses
+        outcome_houses = category_rules.get("outcome_houses") or [4]
+        for house in outcome_houses:
             ruler = chart.house_rulers.get(house)
             if not ruler:
                 continue

@@ -160,6 +160,7 @@ confidence:
 debilitation_penalties:
   dignity_threshold: -4
   l2: 15
+  l4: 15
   l11: 15
   cadent_significator: 5
 

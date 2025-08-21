@@ -24,7 +24,7 @@ except ImportError:  # pragma: no cover
 DEFAULT_RULE: Dict[str, Any] = {
     "primary_significators": [],
     "allowed_turned_houses": {},
-    "outcome_houses": [],
+    "outcome_houses": [4],
     # By default consider general debilitation and cadent placement factors
     "scored_factors": ["debilitation", "cadent_significator"],
 }
