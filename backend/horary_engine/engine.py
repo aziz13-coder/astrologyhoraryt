@@ -350,8 +350,10 @@ except ImportError:  # pragma: no cover - fallback when executed as script
     from question_analyzer import TraditionalHoraryQuestionAnalyzer
 try:
     from ..taxonomy import Category, resolve_category, resolve as resolve_significators
+    from ..category_rules import get_category_rules
 except ImportError:  # pragma: no cover - fallback when package context is missing
     from taxonomy import Category, resolve_category, resolve as resolve_significators
+    from category_rules import get_category_rules
 from .reception import TraditionalReceptionCalculator
 from .aspects import (
     calculate_enhanced_aspects,
@@ -1391,6 +1393,7 @@ class EnhancedTraditionalHoraryJudgmentEngine:
         reasoning = []
         config = cfg()
         question_type = resolve_category(question_analysis.get("question_type"))
+        category_rules = get_category_rules(question_type)
         
         # Initialize evidence ledger
         evidence_ledger = {
@@ -1815,7 +1818,12 @@ class EnhancedTraditionalHoraryJudgmentEngine:
 
             # Apply debilitated ruler and cadent significator penalties
             confidence = self._apply_debilitation_and_cadent_penalties(
-                confidence, chart, querent_planet, quesited_planet, reasoning
+                confidence,
+                chart,
+                querent_planet,
+                quesited_planet,
+                reasoning,
+                category_rules,
             )
 
             # Apply timing decay based on perfection timing
@@ -2196,7 +2204,12 @@ class EnhancedTraditionalHoraryJudgmentEngine:
 
         # Apply debilitated ruler and cadent penalties to final confidence
         final_confidence = self._apply_debilitation_and_cadent_penalties(
-            final_confidence, chart, querent_planet, quesited_planet, reasoning
+            final_confidence,
+            chart,
+            querent_planet,
+            quesited_planet,
+            reasoning,
+            category_rules,
         )
 
         return {
@@ -2397,8 +2410,9 @@ class EnhancedTraditionalHoraryJudgmentEngine:
         querent: Planet,
         quesited: Planet,
         reasoning: List[str],
+        category_rules: Dict[str, Any],
     ) -> float:
-        """Apply penalties for debilitated L2/L11 and cadent significators."""
+        """Apply category-aware penalties for debilitated rulers and cadent significators."""
 
         penalties = getattr(cfg(), "debilitation_penalties", None)
         if not penalties:
@@ -2406,38 +2420,36 @@ class EnhancedTraditionalHoraryJudgmentEngine:
 
         threshold = getattr(penalties, "dignity_threshold", -5)
 
-        l2 = chart.house_rulers.get(2)
-        if l2:
-            l2_pos = chart.planets[l2]
-            if l2_pos.dignity_score <= threshold:
-                penalty = getattr(penalties, "l2", 0)
-                confidence = max(confidence - penalty, 0)
-                reasoning.append(
-                    f"Debilitated L2 ruler ({l2.value}) (-{penalty}%)"
-                )
-
-        l11 = chart.house_rulers.get(11)
-        if l11:
-            l11_pos = chart.planets[l11]
-            if l11_pos.dignity_score <= threshold:
-                penalty = getattr(penalties, "l11", 0)
-                confidence = max(confidence - penalty, 0)
-                reasoning.append(
-                    f"Debilitated L11 ruler ({l11.value}) (-{penalty}%)"
-                )
-
-        cadent_penalty = getattr(penalties, "cadent_significator", 0)
-        for planet in [querent, quesited]:
-            pos = chart.planets.get(planet)
-            if pos:
-                angularity = self.calculator._get_traditional_angularity(
-                    pos.longitude, chart.houses, pos.house
-                )
-                if angularity == "cadent":
-                    confidence = max(confidence - cadent_penalty, 0)
+        # Only apply debilitated ruler penalties for houses explicitly listed
+        for house in [2, 11]:
+            if house not in category_rules.get("outcome_houses", []):
+                continue
+            ruler = chart.house_rulers.get(house)
+            if not ruler:
+                continue
+            pos = chart.planets[ruler]
+            if pos.dignity_score <= threshold:
+                penalty = getattr(penalties, f"l{house}", 0)
+                if penalty:
+                    confidence = max(confidence - penalty, 0)
                     reasoning.append(
-                        f"{planet.value} in cadent house (-{cadent_penalty}%)"
+                        f"Debilitated L{house} ruler ({ruler.value}) (-{penalty}%)"
                     )
+
+        # Cadent significator penalty is applied only when enabled
+        if "cadent_significator" in category_rules.get("scored_factors", []):
+            cadent_penalty = getattr(penalties, "cadent_significator", 0)
+            for planet in [querent, quesited]:
+                pos = chart.planets.get(planet)
+                if pos:
+                    angularity = self.calculator._get_traditional_angularity(
+                        pos.longitude, chart.houses, pos.house
+                    )
+                    if angularity == "cadent":
+                        confidence = max(confidence - cadent_penalty, 0)
+                        reasoning.append(
+                            f"{planet.value} in cadent house (-{cadent_penalty}%)"
+                        )
 
         return confidence
 
