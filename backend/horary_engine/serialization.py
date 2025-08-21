@@ -10,6 +10,7 @@ try:
         PlanetPosition,
         SolarAnalysis,
         SolarCondition,
+        Aspect as AspectType,
     )
 except ImportError:  # pragma: no cover - fallback when executed as script
     from models import (
@@ -19,6 +20,42 @@ except ImportError:  # pragma: no cover - fallback when executed as script
         PlanetPosition,
         SolarAnalysis,
         SolarCondition,
+        Aspect as AspectType,
+    )
+
+try:
+    from .dsl import (
+        Abscission,
+        AccidentalDignity,
+        Aspect as DslAspect,
+        Collection,
+        EssentialDignity,
+        Frustration,
+        HousePlacement,
+        MoonVoidOfCourse,
+        Prohibition,
+        Reception,
+        Refranation,
+        Role,
+        RoleImportance,
+        Translation,
+    )
+except ImportError:  # pragma: no cover
+    from dsl import (
+        Abscission,
+        AccidentalDignity,
+        Aspect as DslAspect,
+        Collection,
+        EssentialDignity,
+        Frustration,
+        HousePlacement,
+        MoonVoidOfCourse,
+        Prohibition,
+        Reception,
+        Refranation,
+        Role,
+        RoleImportance,
+        Translation,
     )
 
 
@@ -153,3 +190,203 @@ def serialize_chart_for_frontend(
         result["moon_next_aspect"] = serialize_lunar_aspect(chart.moon_next_aspect)
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# DSL primitive serialization
+# ---------------------------------------------------------------------------
+
+
+def _actor_to_json(actor: Role | Planet) -> Dict[str, str]:
+    """Serialize an actor (Planet or Role) to a minimal JSON form."""
+    if isinstance(actor, Planet):
+        return {"planet": actor.value}
+    return {"role": actor.name}
+
+
+def _actor_from_json(data: Dict[str, str]) -> Role | Planet:
+    """Deserialize an actor from its JSON representation."""
+    if "planet" in data:
+        return Planet(data["planet"])
+    return Role(data["role"])
+
+
+def serialize_primitive(primitive: Any) -> Dict[str, Any]:
+    """Serialize a DSL primitive into a concise dictionary."""
+    if isinstance(primitive, DslAspect):
+        return {
+            "type": "aspect",
+            "a1": _actor_to_json(primitive.actor1),
+            "a2": _actor_to_json(primitive.actor2),
+            "aspect": primitive.aspect.name,
+            "app": primitive.applying,
+        }
+    if isinstance(primitive, Translation):
+        return {
+            "type": "translation",
+            "tr": _actor_to_json(primitive.translator),
+            "frm": _actor_to_json(primitive.from_actor),
+            "to": _actor_to_json(primitive.to_actor),
+            "asp": primitive.aspect.name,
+            "rcpt": primitive.reception,
+            "app": primitive.applying,
+        }
+    if isinstance(primitive, Collection):
+        return {
+            "type": "collection",
+            "col": _actor_to_json(primitive.collector),
+            "a1": _actor_to_json(primitive.actor1),
+            "a2": _actor_to_json(primitive.actor2),
+            "asp": primitive.aspect.name,
+            "rcpt": primitive.reception,
+            "app": primitive.applying,
+        }
+    if isinstance(primitive, Prohibition):
+        return {
+            "type": "prohibition",
+            "pr": _actor_to_json(primitive.prohibitor),
+            "sig": _actor_to_json(primitive.significator),
+            "asp": primitive.aspect.name if primitive.aspect else None,
+        }
+    if isinstance(primitive, Refranation):
+        return {
+            "type": "refranation",
+            "rf": _actor_to_json(primitive.refrainer),
+            "oth": _actor_to_json(primitive.other),
+        }
+    if isinstance(primitive, Frustration):
+        return {
+            "type": "frustration",
+            "fr": _actor_to_json(primitive.frustrator),
+            "frm": _actor_to_json(primitive.from_actor),
+            "to": _actor_to_json(primitive.to_actor),
+        }
+    if isinstance(primitive, Abscission):
+        return {
+            "type": "abscission",
+            "ab": _actor_to_json(primitive.abscissor),
+            "frm": _actor_to_json(primitive.from_actor),
+            "to": _actor_to_json(primitive.to_actor),
+        }
+    if isinstance(primitive, Reception):
+        return {
+            "type": "reception",
+            "rcv": _actor_to_json(primitive.receiver),
+            "rcd": _actor_to_json(primitive.received),
+            "dig": primitive.dignity,
+        }
+    if isinstance(primitive, EssentialDignity):
+        return {
+            "type": "essential",
+            "act": _actor_to_json(primitive.actor),
+            "score": primitive.score,
+        }
+    if isinstance(primitive, AccidentalDignity):
+        return {
+            "type": "accidental",
+            "act": _actor_to_json(primitive.actor),
+            "score": primitive.score,
+        }
+    if isinstance(primitive, MoonVoidOfCourse):
+        return {
+            "type": "moon_voc",
+            "voc": primitive.is_voc,
+            "detail": primitive.detail,
+        }
+    if isinstance(primitive, HousePlacement):
+        return {
+            "type": "house",
+            "act": _actor_to_json(primitive.actor),
+            "house": primitive.house,
+        }
+    if isinstance(primitive, RoleImportance):
+        return {
+            "type": "role_importance",
+            "role": primitive.role.name,
+            "importance": primitive.importance,
+        }
+    raise TypeError(f"Unsupported primitive type: {type(primitive)!r}")
+
+
+def deserialize_primitive(data: Dict[str, Any]) -> Any:
+    """Reconstruct a DSL primitive from its serialized form."""
+    t = data["type"]
+    if t == "aspect":
+        return DslAspect(
+            _actor_from_json(data["a1"]),
+            _actor_from_json(data["a2"]),
+            AspectType[data["aspect"]],
+            data.get("app", True),
+        )
+    if t == "translation":
+        return Translation(
+            _actor_from_json(data["tr"]),
+            _actor_from_json(data["frm"]),
+            _actor_from_json(data["to"]),
+            AspectType[data.get("asp", "CONJUNCTION")],
+            data.get("rcpt", False),
+            data.get("app", True),
+        )
+    if t == "collection":
+        return Collection(
+            _actor_from_json(data["col"]),
+            _actor_from_json(data["a1"]),
+            _actor_from_json(data["a2"]),
+            AspectType[data.get("asp", "CONJUNCTION")],
+            data.get("rcpt", False),
+            data.get("app", True),
+        )
+    if t == "prohibition":
+        asp = data.get("asp")
+        aspect_enum = AspectType[asp] if asp is not None else None
+        return Prohibition(
+            _actor_from_json(data["pr"]),
+            _actor_from_json(data["sig"]),
+            aspect_enum,
+        )
+    if t == "refranation":
+        return Refranation(
+            _actor_from_json(data["rf"]),
+            _actor_from_json(data["oth"]),
+        )
+    if t == "frustration":
+        return Frustration(
+            _actor_from_json(data["fr"]),
+            _actor_from_json(data["frm"]),
+            _actor_from_json(data["to"]),
+        )
+    if t == "abscission":
+        return Abscission(
+            _actor_from_json(data["ab"]),
+            _actor_from_json(data["frm"]),
+            _actor_from_json(data["to"]),
+        )
+    if t == "reception":
+        return Reception(
+            _actor_from_json(data["rcv"]),
+            _actor_from_json(data["rcd"]),
+            data["dig"],
+        )
+    if t == "essential":
+        return EssentialDignity(
+            _actor_from_json(data["act"]),
+            data["score"],
+        )
+    if t == "accidental":
+        return AccidentalDignity(
+            _actor_from_json(data["act"]),
+            data["score"],
+        )
+    if t == "moon_voc":
+        return MoonVoidOfCourse(
+            bool(data["voc"]),
+            data.get("detail"),
+        )
+    if t == "house":
+        return HousePlacement(
+            _actor_from_json(data["act"]),
+            int(data["house"]),
+        )
+    if t == "role_importance":
+        return RoleImportance(Role(data["role"]), float(data["importance"]))
+    raise ValueError(f"Unknown primitive type: {t}")
