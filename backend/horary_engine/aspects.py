@@ -15,6 +15,17 @@ except ImportError:  # pragma: no cover - fallback when executed as script
 from .calculation.helpers import days_to_sign_exit
 
 
+def _orb_motion(pos1: PlanetPosition, pos2: PlanetPosition, aspect: Aspect) -> float:
+    """Signed change in orb per day between two bodies."""
+
+    diff = (
+        _signed_longitude_delta(pos1.longitude, pos2.longitude)
+        - aspect.degrees
+        + 180
+    ) % 360 - 180
+    return diff * (pos1.speed - pos2.speed)
+
+
 def _signed_longitude_delta(lon1: float, lon2: float) -> float:
     """Return signed longitudinal difference lon1-lon2 normalised to [-180, 180]."""
 
@@ -169,12 +180,7 @@ def is_moon_separating_from_aspect(
 
     if is_applying_enhanced(moon_pos, planet_pos, aspect, jd_ut):
         return False
-
-    diff = (
-        moon_pos.longitude - planet_pos.longitude - aspect.degrees + 180
-    ) % 360 - 180
-    relative_speed = moon_pos.speed - planet_pos.speed
-    return diff * relative_speed > 0
+    return _orb_motion(moon_pos, planet_pos, aspect) > 0
 
 
 def is_moon_applying_to_aspect(
@@ -296,31 +302,20 @@ def calculate_moiety_based_orb(
 def is_applying_enhanced(
     pos1: PlanetPosition, pos2: PlanetPosition, aspect: Aspect, jd_ut: float
 ) -> bool:
-    """Determine if planets are applying to a given aspect analytically.
+    """Determine if planets are applying to a given aspect analytically."""
 
-    The calculation compares the faster planet to the slower one so that
-    applying/separating determination is invariant to argument order and
-    properly handles retrograde motion.
-    """
-
-    # Identify faster and slower bodies by absolute speed
-    if abs(pos1.speed) >= abs(pos2.speed):
-        fast, slow = pos1, pos2
-    else:
-        fast, slow = pos2, pos1
-
-    # Signed difference from exact aspect from fast → slow
-    diff = _signed_longitude_delta(fast.longitude, slow.longitude) - aspect.degrees
-    # Normalise to [-180, 180]
-    diff = (diff + 180) % 360 - 180
+    diff = (
+        _signed_longitude_delta(pos1.longitude, pos2.longitude)
+        - aspect.degrees
+        + 180
+    ) % 360 - 180
     current_orb = abs(diff)
 
     # Check sign exit conditions (preserve traditional horary rules)
     if not _will_perfect_before_sign_exit(pos1, pos2, aspect, current_orb):
         return False
 
-    relative_speed = fast.speed - slow.speed
-    return diff * relative_speed < 0
+    return _orb_motion(pos1, pos2, aspect) < 0
 
 
 def _calculate_orb_to_aspect(pos1: PlanetPosition, pos2: PlanetPosition, aspect: Aspect) -> float:
