@@ -14,18 +14,35 @@ from .polarity_weights import (
 from .polarity import Polarity
 from .dsl import RoleImportance
 from .dsl_to_testimony import dispatch as dsl_dispatch
+from .utils import token_to_string
+try:  # pragma: no cover - allow running as script
+    from ..models import Planet
+except ImportError:  # pragma: no cover
+    from models import Planet
 
 
-def _coerce(testimonies: Iterable[TestimonyKey | str | RoleImportance]) -> Tuple[Sequence[TestimonyKey], Dict[str, float]]:
+def _coerce(
+    testimonies: Iterable[TestimonyKey | str | RoleImportance]
+) -> Tuple[Sequence[TestimonyKey | str], Dict[str, float]]:
     """Split testimonies into tokens and role importance mapping."""
-    tokens: List[TestimonyKey] = []
+
+    tokens: List[TestimonyKey | str] = []
     role_weights: Dict[str, float] = {}
     for raw in testimonies:
         if isinstance(raw, RoleImportance):
-            role_weights[raw.role.name.lower()] = raw.importance
+            name = raw.role.name.lower()
+            role_weights[name] = raw.importance
+            if name == "lq":
+                role_weights["l7"] = raw.importance
             continue
         if isinstance(raw, TestimonyKey):
             tokens.append(raw)
+            continue
+        if isinstance(raw, str):
+            try:
+                tokens.append(TestimonyKey(raw))
+            except ValueError:
+                tokens.append(raw)
             continue
         try:
             tokens.append(TestimonyKey(raw))
@@ -36,21 +53,19 @@ def _coerce(testimonies: Iterable[TestimonyKey | str | RoleImportance]) -> Tuple
 
 def aggregate(
     testimonies: Iterable[TestimonyKey | str | RoleImportance | Any],
-) -> Tuple[float, List[Dict[str, float | TestimonyKey | Polarity | str | bool]]]:
+    contract: Dict[str, Planet] | None = None,
+) -> Tuple[float, List[Dict[str, float | TestimonyKey | Polarity | str | bool | Any]]]:
     """Aggregate testimony tokens into a score with role importance weighting."""
 
     raw_items: List[TestimonyKey | str | RoleImportance] = []
-    extra_info: Dict[TestimonyKey, Dict[str, Any]] = {}
+    extra_info: Dict[TestimonyKey | str, Dict[str, Any]] = {}
     for raw in testimonies:
-        dispatched = dsl_dispatch(raw)
+        dispatched = dsl_dispatch(raw, contract)
         if dispatched:
             for entry in dispatched:
                 token = entry.get("key")
-                if isinstance(token, TestimonyKey):
-                    raw_items.append(token)
-                    extra_info[token] = {
-                        k: v for k, v in entry.items() if k != "key"
-                    }
+                raw_items.append(token)
+                extra_info[token] = {k: v for k, v in entry.items() if k != "key"}
         else:
             raw_items.append(raw)
 
@@ -58,31 +73,31 @@ def aggregate(
 
     total_yes = 0.0
     total_no = 0.0
-    ledger: List[Dict[str, float | TestimonyKey | Polarity | str | bool]] = []
-    seen: set[TestimonyKey] = set()
+    ledger: List[Dict[str, float | TestimonyKey | Polarity | str | bool | Any]] = []
+    seen: set[TestimonyKey | str] = set()
     families_seen: set[str] = set()
 
-    for token in sorted(tokens, key=lambda t: t.value):
+    for token in sorted(tokens, key=token_to_string):
         if token in seen:
             continue
         seen.add(token)
 
-        polarity = POLARITY_TABLE.get(token, Polarity.NEUTRAL)
-        if polarity is Polarity.NEUTRAL:
+        polarity = POLARITY_TABLE.get(token, Polarity.NEUTRAL) if isinstance(token, TestimonyKey) else Polarity.NEUTRAL
+        if polarity is Polarity.NEUTRAL and not isinstance(token, str):
             continue
 
-        family = FAMILY_TABLE.get(token)
-        kind = KIND_TABLE.get(token)
+        family = FAMILY_TABLE.get(token) if isinstance(token, TestimonyKey) else None
+        kind = KIND_TABLE.get(token) if isinstance(token, TestimonyKey) else None
         context_only = family is not None and family in families_seen
         if family is not None and not context_only:
             families_seen.add(family)
 
-        weight = WEIGHT_TABLE.get(token, 0.0)
+        weight = WEIGHT_TABLE.get(token, 0.0) if isinstance(token, TestimonyKey) else 0.0
 
         role_factor = 1.0
-        token_name = token.value.lower()
+        token_name = token_to_string(token).lower()
         for role_name, factor in role_weights.items():
-            pattern = rf"(^|_){re.escape(role_name)}_"
+            pattern = rf"(^|_){re.escape(role_name)}(_|$)"
             if re.search(pattern, token_name):
                 role_factor *= factor
         weight *= role_factor

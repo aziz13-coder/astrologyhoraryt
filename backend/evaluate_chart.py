@@ -81,7 +81,7 @@ def evaluate_chart(
     else:
         from horary_engine.aggregator import aggregate as aggregator_fn
 
-    score, ledger = aggregator_fn(testimonies)
+    score, ledger = aggregator_fn(testimonies, contract)
     # Surface ledger details for downstream inspection and debugging
     logger.info(
         "Contribution ledger: %s",
